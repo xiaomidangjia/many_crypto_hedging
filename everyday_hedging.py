@@ -55,7 +55,9 @@ def calculate_cci(data, n=20):
 
     return cci
 API_URL = 'https://api.bitget.com'
-
+API_SECRET_KEY = 'ca8d708b774782ce0fd09c78ba5c19e1e421d5fd2a78964359e6eb306cf15c67'
+API_KEY = 'bg_42d96db83714abb3757250cef9ba7752'
+PASSPHRASE = 'HBLww130130130'
 margein_coin = 'USDT'
 futures_type = 'USDT-FUTURES'
 contract_num = 5
@@ -263,15 +265,15 @@ while True:
         coin_list = ['btc','sol','xrp','doge','eth']
         for c_ele in coin_list:
             symbol = c_ele.upper() + 'USDT'
-            data_15m_name = c_ele + '_15m_data.csv'
+            data_15m_name = c_ele + '_15m_data_3.csv'
             data_15m = fetch_last_month_klines(symbol,granularity_value='15m',number=900)
             data_15m.to_csv(data_15m_name)
         # 读取15分钟数据
-        btc_data_15m = pd.read_csv('btc_15m_data.csv')
-        sol_data_15m = pd.read_csv('sol_15m_data.csv')
-        eth_data_15m = pd.read_csv('eth_15m_data.csv')
-        xrp_data_15m = pd.read_csv('xrp_15m_data.csv')
-        doge_data_15m = pd.read_csv('doge_15m_data.csv')
+        btc_data_15m = pd.read_csv('btc_15m_data_3.csv')
+        sol_data_15m = pd.read_csv('sol_15m_data_3.csv')
+        eth_data_15m = pd.read_csv('eth_15m_data_3.csv')
+        xrp_data_15m = pd.read_csv('xrp_15m_data_3.csv')
+        doge_data_15m = pd.read_csv('doge_15m_data_3.csv')
         # 把uct8的数据变为uct0的数据
         btc_data_15m['date_time'] = btc_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
         sol_data_15m['date_time'] = sol_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
