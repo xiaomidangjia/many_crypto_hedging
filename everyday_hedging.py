@@ -55,7 +55,9 @@ def calculate_cci(data, n=20):
 
     return cci
 API_URL = 'https://api.bitget.com'
-
+API_SECRET_KEY = 'ca8d708b774782ce0fd09c78ba5c19e1e421d5fd2a78964359e6eb306cf15c67'
+API_KEY = 'bg_42d96db83714abb3757250cef9ba7752'
+PASSPHRASE = 'HBLww130130130'
 margein_coin = 'USDT'
 futures_type = 'USDT-FUTURES'
 contract_num = 5
@@ -613,8 +615,8 @@ while True:
                     now_minute = now_dt.minute
                     
                     # 时间到了 utc0的 00 时间
-                    #if now_date_part == date_part and int(now_hour)==8:
-                    if int(now_hour)==8:
+                    if now_date_part == date_part and int(now_hour)==8:
+                    #if int(now_hour)==8:
                         # 平仓
                         coin_long_num = positions['coin_long_num']
                         coin_short_num = positions['coin_short_num']
