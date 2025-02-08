@@ -16,6 +16,7 @@ import pandas as pd
 import pandas_ta as ta
 import itertools
 import warnings
+import hmac
 # 禁止所有警告
 warnings.filterwarnings('ignore')
 # 计算价格变化率（Rate of Change）

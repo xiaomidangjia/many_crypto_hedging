@@ -81,7 +81,7 @@ import urllib
 import requests
 import base64
 import json
-
+import hmac
 import time
 import pandas as pd
 import numpy as np
