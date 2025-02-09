@@ -55,7 +55,9 @@ def calculate_cci(data, n=20):
 
     return cci
 API_URL = 'https://api.bitget.com'
-
+API_SECRET_KEY = 'ca8d708b774782ce0fd09c78ba5c19e1e421d5fd2a78964359e6eb306cf15c67'
+API_KEY = 'bg_42d96db83714abb3757250cef9ba7752'
+PASSPHRASE = 'HBLww130130130'
 margein_coin = 'USDT'
 futures_type = 'USDT-FUTURES'
 contract_num = 5
@@ -644,6 +646,5 @@ while True:
         now_minute = now_dt.minute
         if now_minute in (15,30,45):
             current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-            v_value = str(round((long_price_change - short_price_change)*100,4))+'%'
             content_5 = f'已经止盈或止损，程序时间监控中待重启,目前时间为：{now_time}' + '\n'
             write_txt(content_5)

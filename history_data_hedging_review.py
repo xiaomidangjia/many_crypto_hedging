@@ -81,11 +81,13 @@ import urllib
 import requests
 import base64
 import json
-import hmac
+
 import time
 import pandas as pd
 import numpy as np
 import random
+import hmac
+import ccxt
 import pandas as pd
 import pandas_ta as ta
 import itertools
@@ -101,7 +103,9 @@ def calculate_rsi(df):
     df['RSI'] = ta.rsi(df['close_price'], length=14)
     return df
 API_URL = 'https://api.bitget.com'
-
+API_SECRET_KEY = 'ca8d708b774782ce0fd09c78ba5c19e1e421d5fd2a78964359e6eb306cf15c67'
+API_KEY = 'bg_42d96db83714abb3757250cef9ba7752'
+PASSPHRASE = 'HBLww130130130'
 margein_coin = 'USDT'
 futures_type = 'USDT-FUTURES'
 contract_num = 5
@@ -302,8 +306,6 @@ for c_ele in coin_list:
     data_15m = fetch_last_month_klines(symbol,granularity_value='15m',number=900)
     data_1m.to_csv(data_1m_name)
     data_15m.to_csv(data_15m_name)
-
-
 
 
 # ================================================================================== 反向验证 =========================================================
@@ -539,17 +541,17 @@ for pair in itertools.combinations(symbol_list, 2):
                 if price > 0.15 :
                     # coin1为多,coin2为空
                     #ins_1 = pd.DataFrame({'long_coin':coin1_atr_value,'short_coin':coin2_atr_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                    ins_2 = pd.DataFrame({'long_coin':coin1_roc_value,'short_coin':coin2_roc_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                    ins_3 = pd.DataFrame({'long_coin':coin1_rsi_value,'short_coin':coin2_rsi_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                    ins_4 = pd.DataFrame({'long_coin':coin1_cci_value,'short_coin':coin2_cci_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
+                    ins_2 = pd.DataFrame({'roc_long_coin':coin1_roc_value,'roc_short_coin':coin2_roc_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
+                    ins_3 = pd.DataFrame({'long_coin':coin1_rsi_value,'short_coin':coin2_rsi_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
+                    ins_4 = pd.DataFrame({'cci_long_coin':coin1_cci_value,'cci_short_coin':coin2_cci_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
                     
                     w = 1
                 elif price < -0.1 :
                     # coin1为空,coin2为多
                     #ins_1 = pd.DataFrame({'long_coin':coin2_atr_value,'short_coin':coin1_atr_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                    ins_2 = pd.DataFrame({'long_coin':coin2_roc_value,'short_coin':coin1_roc_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                    ins_3 = pd.DataFrame({'long_coin':coin2_rsi_value,'short_coin':coin1_rsi_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                    ins_4 = pd.DataFrame({'long_coin':coin2_cci_value,'short_coin':coin1_cci_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
+                    ins_2 = pd.DataFrame({'roc_long_coin':coin2_roc_value,'roc_short_coin':coin1_roc_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
+                    ins_3 = pd.DataFrame({'long_coin':coin2_rsi_value,'short_coin':coin1_rsi_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
+                    ins_4 = pd.DataFrame({'cci_long_coin':coin2_cci_value,'cci_short_coin':coin1_cci_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
                     w = 1
                 else:
                     #ins_1 = pd.DataFrame()
@@ -571,15 +573,15 @@ for pair in itertools.combinations(symbol_list, 2):
             if last_coin1_price >= last_coin2_price:
                 # coin1为多,coin2为空
                 #ins_1 = pd.DataFrame({'long_coin':coin1_atr_value,'short_coin':coin2_atr_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                ins_2 = pd.DataFrame({'long_coin':coin1_roc_value,'short_coin':coin2_roc_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                ins_3 = pd.DataFrame({'long_coin':coin1_rsi_value,'short_coin':coin2_rsi_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                ins_4 = pd.DataFrame({'long_coin':coin1_vol_value,'short_coin':coin2_vol_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
+                ins_2 = pd.DataFrame({'roc_long_coin':coin1_roc_value,'roc_short_coin':coin2_roc_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
+                ins_3 = pd.DataFrame({'long_coin':coin1_rsi_value,'short_coin':coin2_rsi_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
+                ins_4 = pd.DataFrame({'cci_long_coin':coin1_vol_value,'cci_short_coin':coin2_vol_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
             else:
                 # coin1为空，coin2为多
                 #ins_1 = pd.DataFrame({'long_coin':coin2_atr_value,'short_coin':coin1_atr_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                ins_2 = pd.DataFrame({'long_coin':coin2_roc_value,'short_coin':coin1_roc_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                ins_3 = pd.DataFrame({'long_coin':coin2_rsi_value,'short_coin':coin1_rsi_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
-                ins_4 = pd.DataFrame({'long_coin':coin2_vol_value,'short_coin':coin1_vol_value,'coin1_name':coin1_name,'coin2_name':coin2_name},index=[0])
+                ins_2 = pd.DataFrame({'roc_long_coin':coin2_roc_value,'roc_short_coin':coin1_roc_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
+                ins_3 = pd.DataFrame({'long_coin':coin2_rsi_value,'short_coin':coin1_rsi_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
+                ins_4 = pd.DataFrame({'cci_long_coin':coin2_vol_value,'cci_short_coin':coin1_vol_value,'coin1_name':coin1_name,'coin2_name':coin2_name,'date':date_interval[1]},index=[0])
             #art_df = pd.concat([art_df,ins_1])
             roc_df = pd.concat([roc_df,ins_2])
             rsi_df = pd.concat([rsi_df,ins_3])
@@ -587,12 +589,175 @@ for pair in itertools.combinations(symbol_list, 2):
 
         i += 1
 
+        
+        
+new_df = cci_df.merge(roc_df,how='inner',on=['date','coin1_name','coin2_name'])
+new_df['flag1'] = new_df['cci_long_coin'] - new_df['cci_short_coin']
+new_df['flag2'] = new_df['roc_long_coin'] - new_df['roc_short_coin']
+
+new_df_1 = new_df[(new_df.flag1>0) &(new_df.flag2>0)]
+new_df_2 = new_df[(new_df.flag1<0) &(new_df.flag2<0)]
+new_df_3 = new_df[((new_df.flag1>=0) &(new_df.flag2<=0)) | ((new_df.flag1<=0) &(new_df.flag2>=0))]
+print(new_df_1)
+print(new_df_2)
+print(new_df_3)
+
+# =========== 选择 roc 和 cci 同方向的时候，roc的差异
 import pandas as pd
 from scipy import stats
-group1 = roc_df['long_coin']
-group2 = roc_df['short_coin']
-roc_long_mean = np.mean(roc_df['long_coin'])
-roc_short_mean = np.mean(roc_df['short_coin'])
+group1 = new_df_1['roc_long_coin']
+group2 = new_df_1['roc_short_coin']
+roc_long_mean_1 = np.mean(new_df_1['roc_long_coin'])
+roc_short_mean_1 = np.mean(new_df_1['roc_short_coin'])
+roc_long_std_1 = np.std(group1)
+roc_short_std_1 = np.std(group2)
+roc_long_len_1 = len(group1)
+roc_short_len_1 = len(group2)
+roc_levene_stat_1, roc_levene_p_1 = stats.levene(group1, group2)
+
+if roc_levene_p_1 > 0.05:
+    # 方差相等，使用 Student's t-test
+    roc_t_stat_1, roc_p_value_1 = stats.ttest_ind(group1, group2, equal_var=True)
+else:
+    # 方差不等，使用 Welch's t-test
+    roc_t_stat_1, roc_p_value_1 = stats.ttest_ind(group1, group2, equal_var=False)
+
+    
+import pandas as pd
+from scipy import stats
+group1 = new_df_2['roc_long_coin']
+group2 = new_df_2['roc_short_coin']
+roc_long_mean_2 = np.mean(new_df_2['roc_long_coin'])
+roc_short_mean_2 = np.mean(new_df_2['roc_short_coin'])
+roc_long_std_2 = np.std(group1)
+roc_short_std_2 = np.std(group2)
+roc_long_len_2 = len(group1)
+roc_short_len_2 = len(group2)
+roc_levene_stat_2, roc_levene_p_2 = stats.levene(group1, group2)
+
+if roc_levene_p_2 > 0.05:
+    # 方差相等，使用 Student's t-test
+    roc_t_stat_2, roc_p_value_2 = stats.ttest_ind(group1, group2, equal_var=True)
+else:
+    # 方差不等，使用 Welch's t-test
+    roc_t_stat_2, roc_p_value_2 = stats.ttest_ind(group1, group2, equal_var=False)
+
+    
+group1 = new_df_3['roc_long_coin']
+group2 = new_df_3['roc_short_coin']
+roc_long_mean_3 = np.mean(new_df_3['roc_long_coin'])
+roc_short_mean_3 = np.mean(new_df_3['roc_short_coin'])
+roc_long_std_3 = np.std(group1)
+roc_short_std_3 = np.std(group2)
+roc_long_len_3 = len(group1)
+roc_short_len_3 = len(group2)
+roc_levene_stat_3, roc_levene_p_3 = stats.levene(group1, group2)
+
+if roc_levene_p_3 > 0.05:
+    # 方差相等，使用 Student's t-test
+    roc_t_stat_3, roc_p_value_3 = stats.ttest_ind(group1, group2, equal_var=True)
+else:
+    # 方差不等，使用 Welch's t-test
+    roc_t_stat_3, roc_p_value_3 = stats.ttest_ind(group1, group2, equal_var=False)
+
+
+
+# 创建一个2×4的空表格，初始值为0
+table_1 = pd.DataFrame(np.zeros((6, 3)), dtype=str)
+
+# 填充特定值，例如将第一行第一列设置为10
+table_1.iloc[0, 0] = 'CCI&ROC>0'
+table_1.iloc[0, 1] = 'long'
+table_1.iloc[0, 2] = 'short'
+
+table_1.iloc[1, 0] = 'MEAN'
+table_1.iloc[1, 1] = round(roc_long_mean_1,5)
+table_1.iloc[1, 2] = round(roc_short_mean_1,5)
+
+
+table_1.iloc[2, 0] = 'STD'
+table_1.iloc[2, 1] = round(roc_long_std_1,5)
+table_1.iloc[2, 2] = round(roc_short_std_1,5)
+
+table_1.iloc[3, 0] = 'Levene_stat_p'
+table_1.iloc[3, 1] = round(roc_levene_stat_1,3)
+table_1.iloc[3, 2] = round(roc_levene_p_1,3)
+
+table_1.iloc[4, 0] = 'T_stat_p'
+table_1.iloc[4, 1] = round(roc_t_stat_1,3)
+table_1.iloc[4, 2] = round(roc_p_value_1,3)
+
+
+table_1.iloc[5, 0] = 'Sample_number'
+table_1.iloc[5, 1] = len(new_df_1)
+table_1.iloc[5, 2] = len(new_df_1)
+
+# 创建一个2×4的空表格，初始值为0
+table_2 = pd.DataFrame(np.zeros((6, 3)), dtype=str)
+
+# 填充特定值，例如将第一行第一列设置为10
+table_2.iloc[0, 0] = 'CCI&ROC<0'
+table_2.iloc[0, 1] = 'long'
+table_2.iloc[0, 2] = 'short'
+
+table_2.iloc[1, 0] = 'MEAN'
+table_2.iloc[1, 1] = round(roc_long_mean_2,5)
+table_2.iloc[1, 2] = round(roc_short_mean_2,5)
+
+
+table_2.iloc[2, 0] = 'STD'
+table_2.iloc[2, 1] = round(roc_long_std_2,5)
+table_2.iloc[2, 2] = round(roc_short_std_2,5)
+
+table_2.iloc[3, 0] = 'Levene_stat_p'
+table_2.iloc[3, 1] = round(roc_levene_stat_2,3)
+table_2.iloc[3, 2] = round(roc_levene_p_2,3)
+
+table_2.iloc[4, 0] = 'T_stat_p'
+table_2.iloc[4, 1] = round(roc_t_stat_2,3)
+table_2.iloc[4, 2] = round(roc_p_value_2,3)
+
+table_2.iloc[5, 0] = 'Sample_number'
+table_2.iloc[5, 1] = len(new_df_2)
+table_2.iloc[5, 2] = len(new_df_2)
+# 创建一个2×4的空表格，初始值为0
+table_3 = pd.DataFrame(np.zeros((6, 3)), dtype=str)
+
+# 填充特定值，例如将第一行第一列设置为10
+table_3.iloc[0, 0] = 'CCI&ROC<>0'
+table_3.iloc[0, 1] = 'long'
+table_3.iloc[0, 2] = 'short'
+
+table_3.iloc[1, 0] = 'MEAN'
+table_3.iloc[1, 1] = round(roc_long_mean_3,5)
+table_3.iloc[1, 2] = round(roc_short_mean_3,5)
+
+
+table_3.iloc[2, 0] = 'STD'
+table_3.iloc[2, 1] = round(roc_long_std_3,5)
+table_3.iloc[2, 2] = round(roc_short_std_3,5)
+
+table_3.iloc[3, 0] = 'Levene_stat_p'
+table_3.iloc[3, 1] = round(roc_levene_stat_3,3)
+table_3.iloc[3, 2] = round(roc_levene_p_3,3)
+
+table_3.iloc[4, 0] = 'T_stat_p'
+table_3.iloc[4, 1] = round(roc_t_stat_3,3)
+table_3.iloc[4, 2] = round(roc_p_value_3,3)
+
+table_3.iloc[5, 0] = 'Sample_number'
+table_3.iloc[5, 1] = len(new_df_3)
+table_3.iloc[5, 2] = len(new_df_3)
+
+# 使用pd.concat()沿列方向连接
+new_result = pd.concat([table_1, table_2, table_3], axis=1)
+
+import pandas as pd
+from scipy import stats
+group1 = roc_df['roc_long_coin']
+group2 = roc_df['roc_short_coin']
+roc_long_mean = np.mean(roc_df['roc_long_coin'])
+roc_short_mean = np.mean(roc_df['roc_short_coin'])
 roc_long_std = np.std(group1)
 roc_short_std = np.std(group2)
 roc_levene_stat, roc_levene_p = stats.levene(group1, group2)
@@ -622,10 +787,10 @@ else:
 
 
 
-group1 = cci_df['long_coin']
-group2 = cci_df['short_coin']
-cci_long_mean = np.mean(cci_df['long_coin'])
-cci_short_mean = np.mean(cci_df['short_coin'])
+group1 = cci_df['cci_long_coin']
+group2 = cci_df['cci_short_coin']
+cci_long_mean = np.mean(cci_df['cci_long_coin'])
+cci_short_mean = np.mean(cci_df['cci_short_coin'])
 cci_long_std = np.std(group1)
 cci_short_std = np.std(group2)
 cci_levene_stat, cci_levene_p = stats.levene(group1, group2)
@@ -639,7 +804,7 @@ else:
 
 
 # 创建一个2×4的空表格，初始值为0
-table_roc = pd.DataFrame(np.zeros((5, 3)), dtype=str)
+table_roc = pd.DataFrame(np.zeros((6, 3)), dtype=str)
 
 # 填充特定值，例如将第一行第一列设置为10
 table_roc.iloc[0, 0] = 'ROC'
@@ -663,8 +828,13 @@ table_roc.iloc[4, 0] = 'T_stat_p'
 table_roc.iloc[4, 1] = round(roc_t_stat,3)
 table_roc.iloc[4, 2] = round(roc_p_value,3)
 
+
+table_roc.iloc[5, 0] = 'Sample_number'
+table_roc.iloc[5, 1] = len(roc_df)
+table_roc.iloc[5, 2] = len(roc_df)
+
 # 创建一个2×4的空表格，初始值为0
-table_rsi = pd.DataFrame(np.zeros((5, 3)), dtype=str)
+table_rsi = pd.DataFrame(np.zeros((6, 3)), dtype=str)
 
 # 填充特定值，例如将第一行第一列设置为10
 table_rsi.iloc[0, 0] = 'RSI'
@@ -688,9 +858,11 @@ table_rsi.iloc[4, 0] = 'T_stat_p'
 table_rsi.iloc[4, 1] = round(rsi_t_stat,3)
 table_rsi.iloc[4, 2] = round(rsi_p_value,3)
 
-
+table_rsi.iloc[5, 0] = 'Sample_number'
+table_rsi.iloc[5, 1] = len(rsi_df)
+table_rsi.iloc[5, 2] = len(rsi_df)
 # 创建一个2×4的空表格，初始值为0
-table_cci = pd.DataFrame(np.zeros((5, 3)), dtype=str)
+table_cci = pd.DataFrame(np.zeros((6, 3)), dtype=str)
 
 # 填充特定值，例如将第一行第一列设置为10
 table_cci.iloc[0, 0] = 'CCI'
@@ -714,13 +886,15 @@ table_cci.iloc[4, 0] = 'T_stat_p'
 table_cci.iloc[4, 1] = round(cci_t_stat,3)
 table_cci.iloc[4, 2] = round(cci_p_value,3)
 
-
+table_cci.iloc[5, 0] = 'Sample_number'
+table_cci.iloc[5, 1] = len(cci_df)
+table_cci.iloc[5, 2] = len(cci_df)
 
 # 使用pd.concat()沿列方向连接
 test_result = pd.concat([table_roc, table_rsi, table_cci], axis=1)
 
-print('=============== test_result test_result ===============')
-print(test_result)
+#print('=============== test_result test_result ===============')
+#print(test_result)
 
 
 
@@ -1130,7 +1304,8 @@ from email.mime.text import MIMEText
 import pandas as pd
 # 将DataFrame转换为HTML表格
 html_table1 = test_result.to_html(index=False)
-html_table2 = look_df.to_html(index=False)
+html_table2 = new_result.to_html(index=False)
+html_table3 = look_df.to_html(index=False)
 
 # 定义HTML内容，包含两个表格
 html_content = f"""
@@ -1140,8 +1315,11 @@ html_content = f"""
     <p>以下是第一个表格：</p>
     {html_table1}
     <br>
-    <p>以下是第二个表格，执行次数：{action_values},成功率为：{success_values}：</p>
+    <p>以下是第二个表格，在cci和roc方向相同下，检查roc：</p>
     {html_table2}
+    <br>
+    <p>以下是第二个表格，执行次数：{action_values},成功率为：{success_values}：</p>
+    {html_table3}
     <br>
     <p>祝好，<br>卡森</p>
   </body>
