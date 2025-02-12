@@ -56,9 +56,7 @@ def calculate_cci(data, n=20):
     return cci
 
 API_URL = 'https://api.bitget.com'
-API_SECRET_KEY = '20dd0f34495bdd8889ebbadbff40a04068052d41fbf06f14e17d00f3b6d83e36'
-API_KEY = 'bg_4782cc476d58511adb005c8e2a7d6b84'
-PASSPHRASE = 'HBLww130130130'
+
 margein_coin = 'USDT'
 futures_type = 'USDT-FUTURES'
 contract_num = 5
