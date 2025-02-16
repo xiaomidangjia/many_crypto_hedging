@@ -1671,7 +1671,6 @@ return_values_model2 = np.sum(table_model_2['value'])
 
 
 # ============================================================ 模型3 ==========================================================
-
 import requests
 import time
 import pandas as pd
@@ -1827,7 +1826,7 @@ def calculate_price_change(df):
     price_change = (last_value-first_value)/first_value
     return price_change
 import itertools
-date_period = list(sorted(set(fund_rate['date_time'])))[0:-1]
+date_period = list(sorted(set(btc_data['date_time'])))[0:-1]
 length = len(date_period)
 
 look_df = pd.DataFrame()
@@ -1961,20 +1960,20 @@ while i < length-1:
         i += 1
     except:
         break
+
 import itertools
 import warnings
 # 禁止所有警告
 warnings.filterwarnings('ignore')
+look_df = look_df.dropna()
+date_period = list(sorted(set(look_df['date'])))
 look_df = look_df[look_df.coin_1_name != 'ada']
 look_df = look_df[look_df.coin_2_name != 'ada']
-look_df = look_df.dropna()
-#look_df = look_df[look_df.date>=pd.to_datetime('2025-02-10')]
-date_period = list(sorted(set(look_df['date'])))
-
 res_dict = {'coin_long':None,'coin_short':None,'res':None}
 res_df = pd.DataFrame()
 
 for ele in date_period:
+    print(res_dict)
     ins = look_df[look_df.date==ele]
     ins['rate_abs'] = ins['coin_rate'].apply(lambda x:np.abs(x))
     
@@ -1982,7 +1981,9 @@ for ele in date_period:
     
     #sub_ins = sub_ins[sub_ins.coin_rate==np.max(sub_ins['coin_rate'])]
     sub_ins = sub_ins.reset_index(drop=True)
-
+    if len(sub_ins)>1:
+        sub_ins = sub_ins.iloc[len(sub_ins)-1:len(sub_ins)]
+        sub_ins = sub_ins.reset_index(drop=True)
     
     if sub_ins['coin_rate'][0]<0:
         coin_long = sub_ins['coin_1_name'][0]
@@ -1998,6 +1999,8 @@ for ele in date_period:
     pre_coin_short = res_dict['coin_short']
     pre_coin_value = res_dict['res']
     
+    #if coin_long == pre_coin_long and coin_short == pre_coin_short and pre_coin_value < 0:
+
     if coin_long == pre_coin_long and coin_short == pre_coin_short and pre_coin_value < 0:
         ins_1 = ins[(ins.coin_1_name!=coin_long)&(ins.coin_2_name!=coin_short)]
         ins_1 = ins_1[(ins_1.coin_1_name!=coin_short)&(ins_1.coin_2_name!=coin_long)]
@@ -2016,17 +2019,13 @@ for ele in date_period:
             coin_long = sub_ins['coin_2_name'][0]
             coin_short = sub_ins['coin_1_name'][0]
             value = -sub_ins['price_change_value'][0] 
-        
-    
-    res_dict['coin_long'] = coin_long
-    res_dict['coin_short'] = coin_short
-    res_dict['res'] = value
+    if value < 0:
+        res_dict['coin_long'] = coin_long
+        res_dict['coin_short'] = coin_short
+        res_dict['res'] = value
     
     date = sub_ins['date'][0]
-    
     df = pd.DataFrame({'date':date,'coin_long':coin_long,'coin_short':coin_short,'value':value},index=[0])
-
-    
     res_df = pd.concat([res_df,df])
 res_df = res_df.reset_index(drop=True)
 table_model_3 = res_df.iloc[-30:-1]
@@ -2049,10 +2048,10 @@ html_content = f"""
 <html>
   <body>
     <p>您好，</p>
-    <p>以下是第3模型表格，执行次数：{action_values_model3},成功率为：{success_values_model3},总受益为：{return_values_model3}：</p>
-    {html_table1}
+    <p>以下是第3模型表格，执行次数：{action_values_model3},成功率为：{success_values_model3},总收益为：{return_values_model3}：</p>
+    {html_table3}
     <br>
-    <p>以下是第2模型表格，执行次数：{action_values_model2},成功率为：{success_values_model2},总受益为：{return_values_model2}：</p>
+    <p>以下是第2模型表格，执行次数：{action_values_model2},成功率为：{success_values_model2},总收益为：{return_values_model2}：</p>
     {html_table1}
     <br>
     <p>以下是第1模型表格，执行次数：{action_values},成功率为：{success_values}：</p>

@@ -100,7 +100,7 @@ def truncate(number, decimals):
     return int(number * factor) / factor
 
 def write_txt(content):
-    with open(f"/root/many_crypto_hedging/process_2_result.txt", "a") as file:
+    with open(f"/root/many_crypto_hedging/process_3_result.txt", "a") as file:
         file.write(content)
 
 def get_price(symbol):
@@ -259,7 +259,7 @@ def fetch_last_month_klines(symbol, granularity_value,number):
 
     return klines
 
-res_dict = {'coin_long':None,'coin_short':None,'res':None}
+res_dict = {'coin_long':'sol','coin_short':'ltc','res':-1}
 while True:
     time.sleep(1)
     raw_process_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
@@ -433,13 +433,14 @@ while True:
             #print(ins)
             look_df = pd.concat([look_df,ins])
             
-
+        look_df = look_df[look_df.coin_1_name!='ada']
+        look_df = look_df[look_df.coin_2_name!='ada']
         look_df['rate_abs'] = look_df['coin_rate'].apply(lambda x:np.abs(x))
-        sub_look_df = look_df[look_df.rate_abs==np.max(look_df['rate_abs'])]
-        sub_look_df = sub_look_df.reset_index(drop=True)
+        sub_ins = look_df[look_df.rate_abs==np.max(look_df['rate_abs'])]
+        sub_ins = sub_ins.reset_index(drop=True)
 
-        if len(sub_look_df)>1:
-            sub_ins = sub_look_df.iloc[len(sub_look_df)-1:len(sub_look_df)]
+        if len(sub_ins)>1:
+            sub_ins = sub_ins.iloc[len(sub_ins)-1:len(sub_ins)]
             sub_ins = sub_ins.reset_index(drop=True)
 
         if sub_ins['coin_rate'][0]<0:
@@ -597,9 +598,10 @@ while True:
                     write_txt(content_2)
                     
                     position = positions['position']
-                    res_dict['coin_long'] = coin_long
-                    res_dict['coin_short'] = coin_short
-                    res_dict['res'] = long_price_change - short_price_change
+                    if long_price_change - short_price_change < 0:
+                        res_dict['coin_long'] = coin_long
+                        res_dict['coin_short'] = coin_short
+                        res_dict['res'] = long_price_change - short_price_change
                 else:
                     now_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
                     now_dt = datetime.fromisoformat(now_time)
@@ -621,9 +623,10 @@ while True:
                         content_3 = f'{coin_long_name}:{coin_short_name}交易对平仓,时间:{current_time}' + '\n'
                         write_txt(content_3)
                         position = positions['position']
-                        res_dict['coin_long'] = coin_long
-                        res_dict['coin_short'] = coin_short
-                        res_dict['res'] = long_price_change - short_price_change
+                        if long_price_change - short_price_change < 0:
+                            res_dict['coin_long'] = coin_long
+                            res_dict['coin_short'] = coin_short
+                            res_dict['res'] = long_price_change - short_price_change
                     else:
                         position = positions['position']
                         if now_minute in (15,30,45):
