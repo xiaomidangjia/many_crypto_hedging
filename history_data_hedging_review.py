@@ -1635,6 +1635,7 @@ while i < length-1:
 import pickle
 features = ['rsi_d', 'roc_d', 'cci_d', 'rs_d']
 X_test = last_df[features]
+print(X_test)
 
 
 with open('random_forest_model.pkl', 'rb') as f:
@@ -1646,17 +1647,394 @@ y_pred = loaded_model.predict(X_test)
 last_df['y_pred'] = y_pred
 date_period = list(sorted(set(last_df['date'])))
 table_model_2 = pd.DataFrame()
-for date in date_period:
+for date in date_period:#[pd.to_datetime('2025-01-20'),pd.to_datetime('2025-01-22')]:
     ins = last_df[last_df.date==date]
     sub_ins = ins[ins.y_pred==np.max(ins['y_pred'])]
-    table_model_2 = pd.concat([table_model_2,sub_ins])
-table_model_2['flag'] = table_model_2['y_pred'].apply(lambda x:-1 if x>0 else 1)
-table_model_2['value'] = table_model_2['price_change'] * table_model_2['flag']
-table_model_2 = table_model_2[['date','coin_1_name', 'coin_2_name','price_change','y_pred','value']]
+    sub_ins = sub_ins.reset_index(drop=True)
+    if sub_ins['y_pred'][0]>0:
+        coin_long = sub_ins['coin_2_name'][0]
+        coin_short = sub_ins['coin_1_name'][0]
+        value = -sub_ins['price_change'][0]
+        date = sub_ins['date'][0]
+        df = pd.DataFrame({'date':date,'coin_long':coin_long,'coin_short':coin_short,'value':value},index=[0])
+    else:
+        coin_long = sub_ins['coin_1_name'][0]
+        coin_short = sub_ins['coin_2_name'][0]
+        value = sub_ins['price_change'][0]
+        date = sub_ins['date'][0]
+        df = pd.DataFrame({'date':date,'coin_long':coin_long,'coin_short':coin_short,'value':value},index=[0])        
+    table_model_2 = pd.concat([table_model_2,df])
 
 action_values_model2 = len(table_model_2)
 success_values_model2 = len(table_model_2[table_model_2.value>0])/len(table_model_2)
 return_values_model2 = np.sum(table_model_2['value'])
+
+
+# ============================================================ 模型3 ==========================================================
+
+import requests
+import time
+import pandas as pd
+import numpy as np
+from datetime import datetime
+# 转换时间戳（秒转换为毫秒）
+def to_milliseconds(timestamp):
+    return int(timestamp * 1000)
+
+# 获取当前时间的 Unix 时间戳（毫秒）
+def current_timestamp():
+    return int(time.time() * 1000)
+
+# 获取 3 年前的时间戳（毫秒）
+def get_three_years_ago_timestamp():
+    three_years_in_seconds = (2 * 365 +60) * 24 * 60 * 60  # 3年 = 3 * 365 * 24 * 60 * 60 秒
+    return to_milliseconds(time.time() - three_years_in_seconds)
+
+# 获取资金费率
+def get_funding_rates(symbol, start_time, end_time, limit=1000):
+    url = "https://fapi.binance.com/fapi/v1/fundingRate"
+    params = {
+        'symbol': symbol,
+        'startTime': start_time,
+        'endTime': end_time,
+        'limit': limit
+    }
+    response = requests.get(url, params=params)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Error: {response.status_code}")
+        return []
+
+# 获取近3年内的资金费率数据
+def get_funding_rates_for_three_years(symbol):
+    current_time = current_timestamp()  # 当前时间
+    three_years_ago = get_three_years_ago_timestamp()  # 3年前的时间
+    
+    all_funding_rates = []  # 用于存储所有资金费率数据
+    start_time = three_years_ago
+    
+    # 逐步请求每1000条资金费率数据，直到获取到当前时间为止
+    while start_time < current_time:
+        end_time = start_time + 100 * 86400000  # 每次请求1天的数据（86400000 毫秒 = 1天）
+        
+        # 请求资金费率数据
+        funding_rates = get_funding_rates(symbol, start_time, end_time)
+        
+        if funding_rates:
+            all_funding_rates.extend(funding_rates)
+        
+        start_time = end_time  # 更新下一批的起始时间
+        time.sleep(1)
+    
+    return all_funding_rates
+
+# 示例：获取近3年的BTCUSDT资金费率数据
+symbol_list = ['BTCUSDT','ETHUSDT','DOGEUSDT','SOLUSDT','XRPUSDT','LTCUSDT','ADAUSDT']
+last_df = pd.DataFrame()
+for symbol in symbol_list:
+    print(symbol)
+    funding_rates = get_funding_rates_for_three_years(symbol)
+
+    # 打印部分结果
+    for entry in funding_rates:  # 打印前10条数据
+        ins = pd.DataFrame({'symbol':entry['symbol'], 'rate':float(entry['fundingRate']), 'time': entry['fundingTime']},index=[0])
+        last_df = pd.concat([last_df,ins])
+from datetime import datetime
+
+last_df['date_time'] = last_df['time'].apply(lambda x: datetime.utcfromtimestamp(x/1000).strftime('%Y-%m-%d %H:%M:%S') )
+last_df.to_csv('fund_rate.csv')
+import ccxt
+import pandas as pd
+import time
+
+# 连接 Binance
+exchange = ccxt.binance()
+
+symbol_list = ['BTC/USDT','ETH/USDT','SOL/USDT','XRP/USDT','DOGE/USDT','LTC/USDT','ADA/USDT']
+# 设置参数
+
+for symbol in symbol_list:
+    #symbol = 'BTC/USDT'  # 交易对
+    timeframe = '1d'  # 时间周期
+    since = exchange.parse8601('2022-11-01T00:00:00Z')  # 从 2 年前开始
+    limit = 500  # 每次最多获取 500 条数据
+
+    # 获取 K 线数据
+    all_ohlcv = []
+    while since < exchange.milliseconds():
+        ohlcv = exchange.fetch_ohlcv(symbol, timeframe, since, limit)
+
+        if not ohlcv:
+            break  # 如果没有更多数据，停止
+        all_ohlcv.extend(ohlcv)
+
+        since = ohlcv[-1][0] + 1  # 继续获取下一批数据
+        time.sleep(1)  # 避免 API 速率限制
+
+    # 转换为 DataFrame
+    df = pd.DataFrame(all_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+    df['datetime'] = pd.to_datetime(df['timestamp'], unit='ms')
+
+    # 按时间排序
+    df = df[['datetime', 'open', 'high', 'low', 'close', 'volume']]
+    name = symbol.split('/')[0]+'1d_data.csv'
+    df.to_csv(name)
+from datetime import datetime,timedelta
+import numpy as np
+btc_data = pd.read_csv('BTC1d_data.csv')
+sol_data = pd.read_csv('SOL1d_data.csv')
+eth_data = pd.read_csv('ETH1d_data.csv')
+xrp_data = pd.read_csv('XRP1d_data.csv')
+doge_data = pd.read_csv('DOGE1d_data.csv')
+ltc_data = pd.read_csv('LTC1d_data.csv')
+ada_data = pd.read_csv('ADA1d_data.csv')
+
+btc_data['date_time'] = btc_data['datetime'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d'))
+eth_data['date_time'] = eth_data['datetime'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d'))
+sol_data['date_time'] = sol_data['datetime'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d'))
+xrp_data['date_time'] = xrp_data['datetime'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d'))
+doge_data['date_time'] = doge_data['datetime'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d'))
+ltc_data['date_time'] = ltc_data['datetime'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d'))
+ada_data['date_time'] = ada_data['datetime'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d'))
+
+
+btc_data = btc_data.sort_values(by='date_time')
+eth_data = eth_data.sort_values(by='date_time')
+sol_data = sol_data.sort_values(by='date_time')
+xrp_data = xrp_data.sort_values(by='date_time')
+doge_data = doge_data.sort_values(by='date_time')
+ltc_data = ltc_data.sort_values(by='date_time')
+ada_data = ada_data.sort_values(by='date_time')
+
+fund_rate = pd.read_csv('fund_rate.csv')
+fund_rate['date_time'] = fund_rate['date_time'].apply(lambda x:pd.to_datetime(x[0:11]))
+
+btc_fund = fund_rate[fund_rate.symbol=='BTCUSDT']
+eth_fund = fund_rate[fund_rate.symbol=='ETHUSDT']
+xrp_fund = fund_rate[fund_rate.symbol=='XRPUSDT']
+doge_fund = fund_rate[fund_rate.symbol=='DOGEUSDT']
+sol_fund = fund_rate[fund_rate.symbol=='SOLUSDT']
+ltc_fund = fund_rate[fund_rate.symbol=='LTCUSDT']
+ada_fund = fund_rate[fund_rate.symbol=='ADAUSDT']
+
+def calculate_price_change(df):
+    df = df.sort_values(by='date_time')
+    df = df.reset_index(drop=True)
+    first_value = df['open'][0]
+    last_value = df['close'][len(df)-1]
+    price_change = (last_value-first_value)/first_value
+    return price_change
+import itertools
+date_period = list(sorted(set(fund_rate['date_time'])))[0:-1]
+length = len(date_period)
+
+look_df = pd.DataFrame()
+i = 0
+while i < length-1:
+    try:
+        date_interval = date_period[i:i+5]
+        date_s = date_interval[0]
+        date_l = date_interval[3]
+        date_t = date_interval[4]
+        print(date_s,date_l,date_t)
+
+        sub_btc_fund = btc_fund[(btc_fund.date_time>=date_s)&(btc_fund.date_time<=date_l)]
+        sub_eth_fund = eth_fund[(eth_fund.date_time>=date_s)&(eth_fund.date_time<=date_l)]
+        sub_xrp_fund = xrp_fund[(xrp_fund.date_time>=date_s)&(xrp_fund.date_time<=date_l)]
+        sub_doge_fund = doge_fund[(doge_fund.date_time>=date_s)&(doge_fund.date_time<=date_l)]
+        sub_sol_fund = sol_fund[(sol_fund.date_time>=date_s)&(sol_fund.date_time<=date_l)]
+        sub_ltc_fund = ltc_fund[(ltc_fund.date_time>=date_s)&(ltc_fund.date_time<=date_l)]
+        sub_ada_fund = ada_fund[(ada_fund.date_time>=date_s)&(ada_fund.date_time<=date_l)]
+
+        btc_res = btc_data[btc_data.date_time==date_t]
+        sol_res = sol_data[sol_data.date_time==date_t]
+        eth_res = eth_data[eth_data.date_time==date_t]
+        xrp_res = xrp_data[xrp_data.date_time==date_t]
+        doge_res = doge_data[doge_data.date_time==date_t]
+        ltc_res = ltc_data[ltc_data.date_time==date_t]
+        ada_res = ada_data[ada_data.date_time==date_t]
+
+        #print(sub_btc_data)
+        #print(btc_res)
+
+        btc_rate = np.mean(sub_btc_fund['rate'])
+        btc_std = np.std(sub_btc_fund['rate'])
+        btc_price_change = calculate_price_change(btc_res)
+
+        eth_rate = np.mean(sub_eth_fund['rate'])
+        eth_std = np.std(sub_eth_fund['rate'])
+        eth_price_change = calculate_price_change(eth_res)
+
+        xrp_rate = np.mean(sub_xrp_fund['rate'])
+        xrp_std = np.std(sub_xrp_fund['rate'])
+        xrp_price_change = calculate_price_change(xrp_res)
+
+        doge_rate = np.mean(sub_doge_fund['rate'])
+        doge_std = np.std(sub_doge_fund['rate'])
+        doge_price_change = calculate_price_change(doge_res)
+
+        sol_rate = np.mean(sub_sol_fund['rate'])
+        sol_std = np.std(sub_sol_fund['rate'])
+        sol_price_change = calculate_price_change(sol_res)
+
+        ltc_rate = np.mean(sub_ltc_fund['rate'])
+        ltc_std = np.std(sub_ltc_fund['rate'])
+        ltc_price_change = calculate_price_change(ltc_res)
+
+        ada_rate = np.mean(sub_ada_fund['rate'])
+        ada_std = np.std(sub_ada_fund['rate'])
+        ada_price_change = calculate_price_change(ada_res)
+
+        symbol_list = ['btc','ltc','eth','xrp','doge','sol','ada']
+
+        for pair in itertools.combinations(symbol_list, 2):
+            coin_1 = pair[0]
+            coin_2 = pair[1]
+            if coin_1 == 'btc':
+                coin1_rate = btc_rate
+                coin1_std = btc_std
+                coin1_change_value = btc_price_change
+            elif coin_1 == 'ltc':
+                coin1_rate = ltc_rate
+                coin1_std = ltc_std
+                coin1_change_value = ltc_price_change
+            elif coin_1 == 'eth':
+                coin1_rate = eth_rate
+                coin1_std = eth_std
+                coin1_change_value = eth_price_change
+            elif coin_1 == 'xrp':
+                coin1_rate = xrp_rate
+                coin1_std = xrp_std
+                coin1_change_value = xrp_price_change
+            elif coin_1 == 'sol':
+                coin1_rate = sol_rate
+                coin1_std = sol_std
+                coin1_change_value = sol_price_change
+            elif coin_1 == 'doge':
+                coin1_rate = doge_rate
+                coin1_std = doge_std
+                coin1_change_value = doge_price_change
+            elif coin_1 == 'ada':
+                coin1_rate = ada_rate
+                coin1_std = ada_std
+                coin1_change_value = ada_price_change
+            else:
+                p = 1
+            if coin_2 == 'btc':
+                coin2_rate = btc_rate
+                coin2_std = btc_std
+                coin2_change_value = btc_price_change
+            elif coin_2 == 'ltc':
+                coin2_rate = ltc_rate
+                coin2_std = ltc_std
+                coin2_change_value = ltc_price_change
+            elif coin_2 == 'eth':
+                coin2_rate = eth_rate
+                coin2_std = eth_std
+                coin2_change_value = eth_price_change
+            elif coin_2 == 'xrp':
+                coin2_rate = xrp_rate
+                coin2_std = xrp_std
+                coin2_change_value = xrp_price_change
+            elif coin_2 == 'sol':
+                coin2_rate = sol_rate
+                coin2_std = sol_std
+                coin2_change_value = sol_price_change
+            elif coin_2 == 'doge':
+                coin2_rate = doge_rate
+                coin2_std = doge_std
+                coin2_change_value = doge_price_change
+            elif coin_2 == 'ada':
+                coin2_rate = ada_rate
+                coin2_std = ada_std
+                coin2_change_value = ada_price_change
+            else:
+                p = 1
+
+            ins = pd.DataFrame({'date':date_t,'coin_1_name':coin_1,'coin_2_name':coin_2,'coin_rate':coin1_rate-coin2_rate,'coin_std':coin1_std-coin2_std,'price_change_value':coin1_change_value-coin2_change_value},index=[0])
+            #print(ins)
+            look_df = pd.concat([look_df,ins])
+        #print('last_df')
+        #print(last_df)
+        i += 1
+    except:
+        break
+import itertools
+import warnings
+# 禁止所有警告
+warnings.filterwarnings('ignore')
+look_df = look_df[look_df.coin_1_name != 'ada']
+look_df = look_df[look_df.coin_2_name != 'ada']
+look_df = look_df.dropna()
+#look_df = look_df[look_df.date>=pd.to_datetime('2025-02-10')]
+date_period = list(sorted(set(look_df['date'])))
+
+res_dict = {'coin_long':None,'coin_short':None,'res':None}
+res_df = pd.DataFrame()
+
+for ele in date_period:
+    ins = look_df[look_df.date==ele]
+    ins['rate_abs'] = ins['coin_rate'].apply(lambda x:np.abs(x))
+    
+    sub_ins = ins[ins.rate_abs==np.max(ins['rate_abs'])]
+    
+    #sub_ins = sub_ins[sub_ins.coin_rate==np.max(sub_ins['coin_rate'])]
+    sub_ins = sub_ins.reset_index(drop=True)
+
+    
+    if sub_ins['coin_rate'][0]<0:
+        coin_long = sub_ins['coin_1_name'][0]
+        coin_short = sub_ins['coin_2_name'][0]
+        value = sub_ins['price_change_value'][0]
+    else:
+        coin_long = sub_ins['coin_2_name'][0]
+        coin_short = sub_ins['coin_1_name'][0]
+        value = -sub_ins['price_change_value'][0] 
+        
+        
+    pre_coin_long = res_dict['coin_long']
+    pre_coin_short = res_dict['coin_short']
+    pre_coin_value = res_dict['res']
+    
+    if coin_long == pre_coin_long and coin_short == pre_coin_short and pre_coin_value < 0:
+        ins_1 = ins[(ins.coin_1_name!=coin_long)&(ins.coin_2_name!=coin_short)]
+        ins_1 = ins_1[(ins_1.coin_1_name!=coin_short)&(ins_1.coin_2_name!=coin_long)]
+        #print(ins)
+        sub_ins = ins_1[ins_1.rate_abs==np.max(ins_1['rate_abs'])]
+
+        #sub_ins = sub_ins[sub_ins.coin_rate==np.max(sub_ins['coin_rate'])]
+        sub_ins = sub_ins.reset_index(drop=True)
+
+
+        if sub_ins['coin_rate'][0]<0:
+            coin_long = sub_ins['coin_1_name'][0]
+            coin_short = sub_ins['coin_2_name'][0]
+            value = sub_ins['price_change_value'][0]
+        else:
+            coin_long = sub_ins['coin_2_name'][0]
+            coin_short = sub_ins['coin_1_name'][0]
+            value = -sub_ins['price_change_value'][0] 
+        
+    
+    res_dict['coin_long'] = coin_long
+    res_dict['coin_short'] = coin_short
+    res_dict['res'] = value
+    
+    date = sub_ins['date'][0]
+    
+    df = pd.DataFrame({'date':date,'coin_long':coin_long,'coin_short':coin_short,'value':value},index=[0])
+
+    
+    res_df = pd.concat([res_df,df])
+res_df = res_df.reset_index(drop=True)
+table_model_3 = res_df.iloc[-30:-1]
+action_values_model3 = len(table_model_3)
+success_values_model3 = len(table_model_3[table_model_3.value>0])/len(table_model_3)
+return_values_model3 = np.sum(table_model_3['value'])
+
+
 #======自动发邮件
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -1665,12 +2043,15 @@ import pandas as pd
 # 将DataFrame转换为HTML表格
 html_table1 = table_model_2.to_html(index=False)
 html_table2 = table_model_1.to_html(index=False)
-
+html_table3 = table_model_3.to_html(index=False)
 # 定义HTML内容，包含两个表格
 html_content = f"""
 <html>
   <body>
     <p>您好，</p>
+    <p>以下是第3模型表格，执行次数：{action_values_model3},成功率为：{success_values_model3},总受益为：{return_values_model3}：</p>
+    {html_table1}
+    <br>
     <p>以下是第2模型表格，执行次数：{action_values_model2},成功率为：{success_values_model2},总受益为：{return_values_model2}：</p>
     {html_table1}
     <br>

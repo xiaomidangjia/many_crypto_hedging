@@ -56,7 +56,9 @@ def calculate_cci(data, n=20):
     return cci
 
 API_URL = 'https://api.bitget.com'
-
+API_SECRET_KEY = 'ca8d708b774782ce0fd09c78ba5c19e1e421d5fd2a78964359e6eb306cf15c67'
+API_KEY = 'bg_42d96db83714abb3757250cef9ba7752'
+PASSPHRASE = 'HBLww130130130'
 margein_coin = 'USDT'
 futures_type = 'USDT-FUTURES'
 contract_num = 20
@@ -551,7 +553,7 @@ while True:
 
         positions = {'position': 'None','coin_long_name':coin_long,'coin_short_name':coin_short,'coin_long_num':0,'coin_long_price':0,'coin_long_fee':0,'coin_short_num':0,'coin_short_price':0,'coin_short_fee':0,'close_signal':0,'coin_long_volumePlace':coin_long_volumePlace,'coin_short_volumePlace':coin_short_volumePlace}
 
-        order_value = 100
+        order_value = 2000
         position = positions['position']
         while position in ('run_ing','None'):
             coin_long_name = positions['coin_long_name']
