@@ -65,9 +65,7 @@ def calculate_price_change(df):
     return price_change
 
 API_URL = 'https://api.bitget.com'
-API_SECRET_KEY = '48ba2d9468a9aecf42660aea67a3af70bc42ac8317343098e330e3824fa9d771'
-API_KEY = 'bg_f824be07e12f5c2ff648f6a0eb57833e'
-PASSPHRASE = 'HBLww130130130'
+
 margein_coin = 'USDT'
 futures_type = 'USDT-FUTURES'
 contract_num = 20
