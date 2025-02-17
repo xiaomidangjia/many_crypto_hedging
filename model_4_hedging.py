@@ -65,8 +65,8 @@ def calculate_price_change(df):
     return price_change
 
 API_URL = 'https://api.bitget.com'
-API_SECRET_KEY = '093d0fbf47b948b95338dc7b2ad5d4341ae7fa1b0057aeb81aacbbe2ddd18571'
-API_KEY = 'bg_f8eeda408a25ba607bd7ca998df4b4f6'
+API_SECRET_KEY = '48ba2d9468a9aecf42660aea67a3af70bc42ac8317343098e330e3824fa9d771'
+API_KEY = 'bg_f824be07e12f5c2ff648f6a0eb57833e'
 PASSPHRASE = 'HBLww130130130'
 margein_coin = 'USDT'
 futures_type = 'USDT-FUTURES'
@@ -100,7 +100,7 @@ def truncate(number, decimals):
     return int(number * factor) / factor
 
 def write_txt(content):
-    with open(f"/root/many_crypto_hedging/process_2_result.txt", "a") as file:
+    with open(f"/root/many_crypto_hedging/process_4_result.txt", "a") as file:
         file.write(content)
 
 def get_price(symbol):
@@ -259,6 +259,7 @@ def fetch_last_month_klines(symbol, granularity_value,number):
 
     return klines
 
+res_dict = {'coin_long':'sol','coin_short':'ltc','res':-1}
 while True:
     time.sleep(1)
     raw_process_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
@@ -273,18 +274,20 @@ while True:
         content_process_close = f'程序最终结束的日期{date_part}和小时{8}'+ '\n'
         write_txt(content_process_start)
         write_txt(content_process_close)
+
         coin_list = ['btc','sol','xrp','doge','eth']
         for c_ele in coin_list:
             symbol = c_ele.upper() + 'USDT'
-            data_15m_name = c_ele + '_15m_data_2.csv'
+            data_15m_name = c_ele + '_15m_data_m4.csv'
             data_15m = fetch_last_month_klines(symbol,granularity_value='15m',number=900)
             data_15m.to_csv(data_15m_name)
+
         # 读取15分钟数据
-        btc_data_15m = pd.read_csv('btc_15m_data_2.csv')
-        sol_data_15m = pd.read_csv('sol_15m_data_2.csv')
-        eth_data_15m = pd.read_csv('eth_15m_data_2.csv')
-        xrp_data_15m = pd.read_csv('xrp_15m_data_2.csv')
-        doge_data_15m = pd.read_csv('doge_15m_data_2.csv')
+        btc_data_15m = pd.read_csv('btc_15m_data_m4.csv')
+        sol_data_15m = pd.read_csv('sol_15m_data_m4.csv')
+        eth_data_15m = pd.read_csv('eth_15m_data_m4.csv')
+        xrp_data_15m = pd.read_csv('xrp_15m_data_m4.csv')
+        doge_data_15m = pd.read_csv('doge_15m_data_m4.csv')
         # 把uct8的数据变为uct0的数据
         btc_data_15m['date_time'] = btc_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
         sol_data_15m['date_time'] = sol_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
@@ -306,183 +309,124 @@ while True:
 
 
         date_list = list(sorted(set(btc_data_15m['date'])))
-        data_target = str(date_list[-2])
+        data_start = str(date_list[-4])
+        data_end = str(date_list[-2])
 
         #print(data_target)
-        btc_data_15m = btc_data_15m[btc_data_15m.date==pd.to_datetime(data_target)]
-        sol_data_15m = sol_data_15m[sol_data_15m.date==pd.to_datetime(data_target)]
-        eth_data_15m = eth_data_15m[eth_data_15m.date==pd.to_datetime(data_target)]
-        xrp_data_15m = xrp_data_15m[xrp_data_15m.date==pd.to_datetime(data_target)]
-        doge_data_15m = doge_data_15m[doge_data_15m.date==pd.to_datetime(data_target)]
+        btc_data_15m = btc_data_15m[(btc_data_15m.date>=pd.to_datetime(data_start))&(btc_data_15m.date<=pd.to_datetime(data_end))]
+        sol_data_15m = sol_data_15m[(sol_data_15m.date>=pd.to_datetime(data_start))&(sol_data_15m.date<=pd.to_datetime(data_end))]
+        eth_data_15m = eth_data_15m[(eth_data_15m.date>=pd.to_datetime(data_start))&(eth_data_15m.date<=pd.to_datetime(data_end))]
+        xrp_data_15m = xrp_data_15m[(xrp_data_15m.date>=pd.to_datetime(data_start))&(xrp_data_15m.date<=pd.to_datetime(data_end))]
+        doge_data_15m = doge_data_15m[(doge_data_15m.date>=pd.to_datetime(data_start))&(doge_data_15m.date<=pd.to_datetime(data_end))]
 
-        btc_data_15m = btc_data_15m.sort_values(by='date_time')
-        sol_data_15m = sol_data_15m.sort_values(by='date_time')
-        eth_data_15m = eth_data_15m.sort_values(by='date_time')
-        xrp_data_15m = xrp_data_15m.sort_values(by='date_time')
-        doge_data_15m = doge_data_15m.sort_values(by='date_time')
-
-        # 计算 rsi
-        btc_rsi = calculate_rsi(btc_data_15m)
-        btc_rsi = btc_rsi.dropna()
-        btc_rsi_value = np.mean(btc_rsi['RSI'])
-
-        sol_rsi = calculate_rsi(sol_data_15m)
-        sol_rsi = sol_rsi.dropna()
-        sol_rsi_value = np.mean(sol_rsi['RSI'])
-
-        eth_rsi = calculate_rsi(eth_data_15m)
-        eth_rsi = eth_rsi.dropna()
-        eth_rsi_value = np.mean(eth_rsi['RSI'])
-
-        xrp_rsi = calculate_rsi(xrp_data_15m)
-        xrp_rsi = xrp_rsi.dropna()
-        xrp_rsi_value = np.mean(xrp_rsi['RSI'])
-
-        doge_rsi = calculate_rsi(doge_data_15m)
-        doge_rsi = doge_rsi.dropna()
-        doge_rsi_value = np.mean(doge_rsi['RSI'])
-
-        # 计算 roc
-        btc_roc = calculate_roc(btc_data_15m)
-        btc_roc = btc_roc.dropna()
-        btc_roc_value = np.mean(btc_roc['ROC'])
-
-        sol_roc = calculate_roc(sol_data_15m)
-        sol_roc = sol_roc.dropna()
-        sol_roc_value = np.mean(sol_roc['ROC'])
-
-        eth_roc = calculate_roc(eth_data_15m)
-        eth_roc = eth_roc.dropna()
-        eth_roc_value = np.mean(eth_roc['ROC'])
-
-        xrp_roc = calculate_roc(xrp_data_15m)
-        xrp_roc = xrp_roc.dropna()
-        xrp_roc_value = np.mean(xrp_roc['ROC'])
-
-        doge_roc = calculate_roc(doge_data_15m)
-        doge_roc = doge_roc.dropna()
-        doge_roc_value = np.mean(doge_roc['ROC'])
-
-        btc_cci = calculate_cci(btc_data_15m, n=20)
-        btc_cci = btc_cci.dropna()
-        btc_cci_value = np.mean(btc_cci)
-
-        sol_cci = calculate_cci(sol_data_15m, n=20)
-        sol_cci = sol_cci.dropna()
-        sol_cci_value = np.mean(sol_cci)
-
-        eth_cci = calculate_cci(eth_data_15m, n=20)
-        eth_cci = eth_cci.dropna()
-        eth_cci_value = np.mean(eth_cci)
-
-        xrp_cci = calculate_cci(xrp_data_15m, n=20)
-        xrp_cci = xrp_cci.dropna()
-        xrp_cci_value = np.mean(xrp_cci)
-
-        doge_cci = calculate_cci(doge_data_15m, n=20)
-        doge_cci = doge_cci.dropna()
-        doge_cci_value = np.mean(doge_cci)
-
-
+        btc_data_15m_sample = btc_data_15m.sort_values(by='date_time')
+        sol_data_15m_sample = sol_data_15m.sort_values(by='date_time')
+        eth_data_15m_sample = eth_data_15m.sort_values(by='date_time')
+        xrp_data_15m_sample = xrp_data_15m.sort_values(by='date_time')
+        doge_data_15m_sample = doge_data_15m.sort_values(by='date_time')
 
         symbol_list = ['btc','eth','xrp','doge','sol']
-        last_df = pd.DataFrame()
 
+        look_df = pd.DataFrame()
         for pair in itertools.combinations(symbol_list, 2):
             coin_1 = pair[0]
-            coin_2 = pair[1]
+            coin_2 =  pair[1]
             if coin_1 == 'btc':
-                coin1_rsi_value = btc_rsi_value
-                coin1_roc_value = btc_roc_value
-                coin1_cci_value = btc_cci_value
-                coin1_rs_value = calculate_price_change(btc_data_15m)
+                coin1_data = btc_data_15m_sample
             elif coin_1 == 'eth':
-                coin1_rsi_value = eth_rsi_value
-                coin1_roc_value = eth_roc_value
-                coin1_cci_value = eth_cci_value
-                coin1_rs_value = calculate_price_change(eth_data_15m)
+                coin1_data = eth_data_15m_sample
             elif coin_1 == 'xrp':
-                coin1_rsi_value = xrp_rsi_value
-                coin1_roc_value = xrp_roc_value
-                coin1_cci_value = xrp_cci_value
-                coin1_rs_value = calculate_price_change(xrp_data_15m)
+                coin1_data = xrp_data_15m_sample
             elif coin_1 == 'sol':
-                coin1_rsi_value = sol_rsi_value
-                coin1_roc_value = sol_roc_value
-                coin1_cci_value = sol_cci_value
-                coin1_rs_value = calculate_price_change(sol_data_15m)
+                coin1_data = sol_data_15m_sample
             elif coin_1 == 'doge':
-                coin1_rsi_value = doge_rsi_value
-                coin1_roc_value = doge_roc_value
-                coin1_cci_value = doge_cci_value
-                coin1_rs_value = calculate_price_change(doge_data_15m)
+                coin1_data = doge_data_15m_sample
             else:
-                coin1_rsi_value = 0
-                coin1_roc_value = 0
+                p = 1
             if coin_2 == 'btc':
-                coin2_rsi_value = btc_rsi_value
-                coin2_roc_value = btc_roc_value
-                coin2_cci_value = btc_cci_value
-                coin2_rs_value = calculate_price_change(btc_data_15m)
+                coin2_data = btc_data_15m_sample  
             elif coin_2 == 'eth':
-                coin2_rsi_value = eth_rsi_value
-                coin2_roc_value = eth_roc_value
-                coin2_cci_value = eth_cci_value
-                coin2_rs_value = calculate_price_change(eth_data_15m)
+                coin2_data = eth_data_15m_sample
             elif coin_2 == 'xrp':
-                coin2_rsi_value = xrp_rsi_value
-                coin2_roc_value = xrp_roc_value
-                coin2_cci_value = xrp_cci_value
-                coin2_rs_value = calculate_price_change(xrp_data_15m)
+                coin2_data = xrp_data_15m_sample
             elif coin_2 == 'sol':
-                coin2_rsi_value = sol_rsi_value
-                coin2_roc_value = sol_roc_value
-                coin2_cci_value = sol_cci_value
-                coin2_rs_value = calculate_price_change(sol_data_15m)
+                coin2_data = sol_data_15m_sample
             elif coin_2 == 'doge':
-                coin2_rsi_value = doge_rsi_value
-                coin2_roc_value = doge_roc_value
-                coin2_cci_value = doge_cci_value
-                coin2_rs_value = calculate_price_change(doge_data_15m)
+                coin2_data = doge_data_15m_sample
             else:
-                coin2_rsi_value = 0
-                coin2_roc_value = 0
+                p = 1
+                
+                
+            new_data = coin1_data.merge(coin2_data,how='inner',on=['date_time'])
+            new_data = new_data.sort_values(by='date_time')
+            new_data = new_data.reset_index(drop=True)
 
-            ins = pd.DataFrame({'coin_1_name':coin_1,'coin_2_name':coin_2,'rsi_d':coin1_rsi_value-coin2_rsi_value,'rs_d':coin1_rs_value - coin2_rs_value,'roc_d':coin1_roc_value-coin2_roc_value,'cci_d':coin1_cci_value-coin2_cci_value},index=[0])
-            last_df = pd.concat([last_df,ins])
+            # 进行协整分析
 
-        # 模型预测
-        features = ['rsi_d', 'roc_d', 'cci_d', 'rs_d']
-        X_test = last_df[features]
+            corr_value = new_data['close_price_x'].corr(new_data['close_price_y'])
 
-
-        with open('random_forest_model.pkl', 'rb') as f:
-            loaded_model = pickle.load(f)
-        # 预测均值
-        y_pred = loaded_model.predict(X_test)
-
-
-        last_df['y_pred'] = y_pred
-        sub_last_df = last_df[last_df.y_pred==np.max(last_df['y_pred'])]
-        
-        sub_last_df = sub_last_df.reset_index(drop=True)
-
-        if sub_last_df['y_pred'][0] > 0:
-            coin_long = sub_last_df['coin_2_name'][0]
-            coin_short = sub_last_df['coin_1_name'][0]
+            # 计算价格比例
+            new_data['price_percent'] = new_data['close_price_x'] / new_data['close_price_y']
+            
+            per_mean = np.mean(new_data['price_percent'])
+            per_std = np.std(new_data['price_percent'])
+            
+            deviation_degree = (new_data['price_percent'][len(new_data)-1]-per_mean)/per_std
+            
+                
+            ins = pd.DataFrame({'date':date_1,'coin_1_name':coin_1,'coin_2_name':coin_2,'deviation_degree':deviation_degree,'corr_value':corr_value},index=[0])
+            #print(ins)
+            look_df = pd.concat([look_df,ins])
+        look_df = look_df[(look_df.corr_value>0.7)]
+        if len(look_df) == 0:
+            coin_long = None
+            coin_short = None
         else:
-            coin_long = sub_last_df['coin_1_name'][0]
-            coin_short = sub_last_df['coin_2_name'][0]
+            look_df['d_abs'] = look_df['deviation_degree'].apply(lambda x:np.abs(x))
+            sub_ins = look_df[look_df.d_abs==np.max(look_df['d_abs'])]
+            sub_ins = sub_ins.reset_index(drop=True)
+            if sub_ins['deviation_degree'][0] > 1.5:
+                coin_long = sub_ins['coin_1_name'][0]
+                coin_short = sub_ins['coin_2_name'][0]
+            elif sub_ins['deviation_degree'][0] < -1.5:
+                coin_long = sub_ins['coin_2_name'][0]
+                coin_short = sub_ins['coin_1_name'][0]
+            else:
+                coin_long = None
+                coin_short = None
+            pre_coin_long = res_dict['coin_long']
+            pre_coin_short = res_dict['coin_short']
+            pre_coin_value = res_dict['res']
+            if coin_long == pre_coin_long and coin_short == pre_coin_short :
+                ins_1 = look_df[(look_df.coin_1_name!=coin_long)&(look_df.coin_2_name!=coin_short)]
+                ins_1 = ins_1[(ins_1.coin_1_name!=coin_short)&(ins_1.coin_2_name!=coin_long)]
+                #print(ins)
+                if len(ins_1)>0:
+                    sub_ins = ins_1[ins_1.d_abs==np.max(ins_1['d_abs'])]
+                    sub_ins = sub_ins.reset_index(drop=True)
+                    if sub_ins['deviation_degree'][0] > 1.5:
+                        coin_long = sub_ins['coin_1_name'][0]
+                        coin_short = sub_ins['coin_2_name'][0]
+                    elif sub_ins['deviation_degree'][0] < -1.5:
+                        coin_long = sub_ins['coin_2_name'][0]
+                        coin_short = sub_ins['coin_1_name'][0]
+                    else:
+                        coin_long = None
+                        coin_short = None
+                else:
+                    coin_long = None
+                    coin_short = None
 
+        data_target = date_period[-1]
         content_judge = f'根据{data_target}的数据判断{dt.date()}做多币种{coin_long},做空币种{coin_short}' + '\n'
         write_txt(content_judge)
         
         judge = 0
         while judge == 0:
             try:
-                pairs = ['BTCUSDT', 'ETHUSDT','XRPUSDT','DOGEUSDT','SOLUSDT']
-                all_volumePlace = {'BTCUSDT':0, 'ETHUSDT':0,'XRPUSDT':0,'DOGEUSDT':0,'SOLUSDT':0}
-                all_pricePlace = {'BTCUSDT':0, 'ETHUSDT':0,'XRPUSDT':0,'DOGEUSDT':0,'SOLUSDT':0}
+                pairs = ['BTCUSDT', 'ETHUSDT','XRPUSDT','DOGEUSDT','SOLUSDT','LTCUSDT','ADAUSDT']
+                all_volumePlace = {'BTCUSDT':0, 'ETHUSDT':0,'XRPUSDT':0,'DOGEUSDT':0,'SOLUSDT':0,'LTCUSDT':0,'ADAUSDT':0}
+                all_pricePlace = {'BTCUSDT':0, 'ETHUSDT':0,'XRPUSDT':0,'DOGEUSDT':0,'SOLUSDT':0,'LTCUSDT':0,'ADAUSDT':0}
                 for crypto_usdt in pairs:
                     # 初始化 bitget 平台的合约的 保证金模式，杠杆大小，以及开仓币种的最小下单单位
                     # 调整保证金模式（全仓/逐仓）
@@ -541,79 +485,57 @@ while True:
                     judge = 1
             except:
                 time.sleep(0.5)
+        if coin_long != None:
+            coin_long_usdt = coin_long.upper()+'USDT'
+            coin_short_usdt = coin_short.upper()+'USDT'
+            coin_long_volumePlace = all_volumePlace[coin_long_usdt]
+            coin_short_volumePlace = all_volumePlace[coin_short_usdt]
 
-        coin_long = coin_long.upper()+'USDT'
-        coin_short = coin_short.upper()+'USDT'
-        coin_long_volumePlace = all_volumePlace[coin_long]
-        coin_short_volumePlace = all_volumePlace[coin_short]
+            positions = {'position': 'None','coin_long_name':coin_long_usdt,'coin_short_name':coin_short_usdt,'coin_long_num':0,'coin_long_price':0,'coin_long_fee':0,'coin_short_num':0,'coin_short_price':0,'coin_short_fee':0,'close_signal':0,'coin_long_volumePlace':coin_long_volumePlace,'coin_short_volumePlace':coin_short_volumePlace}
 
-        positions = {'position': 'None','coin_long_name':coin_long,'coin_short_name':coin_short,'coin_long_num':0,'coin_long_price':0,'coin_long_fee':0,'coin_short_num':0,'coin_short_price':0,'coin_short_fee':0,'close_signal':0,'coin_long_volumePlace':coin_long_volumePlace,'coin_short_volumePlace':coin_short_volumePlace}
+            order_value = 500
+            position = positions['position']
+            while position in ('run_ing','None'):
+                coin_long_name = positions['coin_long_name']
+                coin_short_name = positions['coin_short_name']
+                if position == 'None':
+                    coin_long_volumePlace = positions['coin_long_volumePlace']
+                    coin_short_volumePlace = positions['coin_short_volumePlace']
 
-        order_value = 2000
-        position = positions['position']
-        while position in ('run_ing','None'):
-            coin_long_name = positions['coin_long_name']
-            coin_short_name = positions['coin_short_name']
-            if position == 'None':
-                coin_long_volumePlace = positions['coin_long_volumePlace']
-                coin_short_volumePlace = positions['coin_short_volumePlace']
-
-                coin_long_price = get_price(symbol=coin_long_name)
-                coin_long_num = truncate(order_value*contract_num/coin_long_price, decimals=coin_long_volumePlace)
-                coin_long_order_id = open_state(crypto_usdt=coin_long_name,order_usdt=coin_long_num,side='buy',tradeSide='open')
-                # 获取 long 订单详情
-                coin_long_price_t,coin_long_num = check_order(crypto_usdt=coin_long_name ,id_num=coin_long_order_id)
-                positions['coin_long_num'] = coin_long_num
-                positions['coin_long_price'] = coin_long_price_t
-                # positions
-                coin_short_price = get_price(symbol=coin_short_name)
-                coin_short_num = truncate(order_value*contract_num/coin_short_price, decimals=coin_short_volumePlace)
-                coin_short_order_id = open_state(crypto_usdt=coin_short_name,order_usdt=coin_short_num,side='sell',tradeSide='open') 
-                # 获取 short 订单详情
-                coin_short_price_t,coin_short_num = check_order(crypto_usdt=coin_short_name ,id_num=coin_short_order_id)
-                positions['coin_short_num'] = coin_short_num
-                positions['coin_short_price'] = coin_short_price_t
-                # 更新 position
-                positions['position'] = 'run_ing'
-                current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-                content_1 = f'{coin_long_name}:{coin_short_name}交易对开仓,时间:{current_time}' + '\n'
-                write_txt(content_1)
-                #print(positions)
-                
-                position = positions['position']
-            elif position == 'run_ing':
-                time.sleep(3)
-                raw_coin_long_price = positions['coin_long_price']
-                raw_coin_short_price = positions['coin_short_price']
-                last_coin_long_price = get_price(symbol=coin_long_name)
-                last_coin_short_price = get_price(symbol=coin_short_name)
-
-                long_price_change = (last_coin_long_price-raw_coin_long_price)/raw_coin_long_price
-                short_price_change = (last_coin_short_price-raw_coin_short_price)/raw_coin_short_price
-
-                if long_price_change - short_price_change > 0.25 or long_price_change - short_price_change < -0.045:
-                    # 平仓
-                    coin_long_num = positions['coin_long_num']
-                    coin_short_num = positions['coin_short_num']
-                    close_long_id = open_state(crypto_usdt=coin_long_name ,order_usdt=coin_long_num,side='buy',tradeSide='close')
-                    close_short_id = open_state(crypto_usdt=coin_short_name ,order_usdt=coin_short_num,side='sell',tradeSide='close')
-                    positions['position'] = 'close'
+                    coin_long_price = get_price(symbol=coin_long_name)
+                    coin_long_num = truncate(order_value*contract_num/coin_long_price, decimals=coin_long_volumePlace)
+                    coin_long_order_id = open_state(crypto_usdt=coin_long_name,order_usdt=coin_long_num,side='buy',tradeSide='open')
+                    # 获取 long 订单详情
+                    coin_long_price_t,coin_long_num = check_order(crypto_usdt=coin_long_name ,id_num=coin_long_order_id)
+                    positions['coin_long_num'] = coin_long_num
+                    positions['coin_long_price'] = coin_long_price_t
+                    # positions
+                    coin_short_price = get_price(symbol=coin_short_name)
+                    coin_short_num = truncate(order_value*contract_num/coin_short_price, decimals=coin_short_volumePlace)
+                    coin_short_order_id = open_state(crypto_usdt=coin_short_name,order_usdt=coin_short_num,side='sell',tradeSide='open') 
+                    # 获取 short 订单详情
+                    coin_short_price_t,coin_short_num = check_order(crypto_usdt=coin_short_name ,id_num=coin_short_order_id)
+                    positions['coin_short_num'] = coin_short_num
+                    positions['coin_short_price'] = coin_short_price_t
+                    # 更新 position
+                    positions['position'] = 'run_ing'
                     current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-                    content_2 = f'{coin_long_name}:{coin_short_name}交易对平仓,时间:{current_time}' + '\n'
-                    write_txt(content_2)
+                    content_1 = f'{coin_long_name}:{coin_short_name}交易对开仓,时间:{current_time}' + '\n'
+                    write_txt(content_1)
+                    #print(positions)
                     
                     position = positions['position']
-                else:
-                    now_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-                    now_dt = datetime.fromisoformat(now_time)
-                    # 提取日期部分
-                    now_date_part = now_dt.date()
-                    now_hour = now_dt.hour
-                    now_minute = now_dt.minute
-                    
-                    # 时间到了 utc0的 00 时间
-                    if now_date_part == date_part and int(now_hour)==8:
-                    #if int(now_hour)==8:
+                elif position == 'run_ing':
+                    time.sleep(3)
+                    raw_coin_long_price = positions['coin_long_price']
+                    raw_coin_short_price = positions['coin_short_price']
+                    last_coin_long_price = get_price(symbol=coin_long_name)
+                    last_coin_short_price = get_price(symbol=coin_short_name)
+
+                    long_price_change = (last_coin_long_price-raw_coin_long_price)/raw_coin_long_price
+                    short_price_change = (last_coin_short_price-raw_coin_short_price)/raw_coin_short_price
+
+                    if long_price_change - short_price_change > 0.25 or long_price_change - short_price_change < -0.045:
                         # 平仓
                         coin_long_num = positions['coin_long_num']
                         coin_short_num = positions['coin_short_num']
@@ -621,19 +543,49 @@ while True:
                         close_short_id = open_state(crypto_usdt=coin_short_name ,order_usdt=coin_short_num,side='sell',tradeSide='close')
                         positions['position'] = 'close'
                         current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-                        content_3 = f'{coin_long_name}:{coin_short_name}交易对平仓,时间:{current_time}' + '\n'
-                        write_txt(content_3)
+                        content_2 = f'{coin_long_name}:{coin_short_name}交易对平仓,时间:{current_time}' + '\n'
+                        write_txt(content_2)
+                        
                         position = positions['position']
+                        if long_price_change - short_price_change < 0:
+                            res_dict['coin_long'] = coin_long
+                            res_dict['coin_short'] = coin_short
+                            res_dict['res'] = long_price_change - short_price_change
                     else:
-                        position = positions['position']
-                        if now_minute in (15,30,45):
+                        now_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+                        now_dt = datetime.fromisoformat(now_time)
+                        # 提取日期部分
+                        now_date_part = now_dt.date()
+                        now_hour = now_dt.hour
+                        now_minute = now_dt.minute
+                        
+                        # 时间到了 utc0的 00 时间
+                        if now_date_part == date_part and int(now_hour)==8:
+                        #if int(now_hour)==8:
+                            # 平仓
+                            coin_long_num = positions['coin_long_num']
+                            coin_short_num = positions['coin_short_num']
+                            close_long_id = open_state(crypto_usdt=coin_long_name ,order_usdt=coin_long_num,side='buy',tradeSide='close')
+                            close_short_id = open_state(crypto_usdt=coin_short_name ,order_usdt=coin_short_num,side='sell',tradeSide='close')
+                            positions['position'] = 'close'
                             current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
-                            v_value = str(round((long_price_change - short_price_change)*100,4))+'%'
-                            content_4 = f'{coin_long_name}:{coin_short_name}交易对在时间:{current_time}正在监控中，差距为{v_value}' + '\n'
-                            write_txt(content_4) 
-                        continue
-            else:
-                break
+                            content_3 = f'{coin_long_name}:{coin_short_name}交易对平仓,时间:{current_time}' + '\n'
+                            write_txt(content_3)
+                            position = positions['position']
+                            if long_price_change - short_price_change < 0:
+                                res_dict['coin_long'] = coin_long
+                                res_dict['coin_short'] = coin_short
+                                res_dict['res'] = long_price_change - short_price_change
+                        else:
+                            position = positions['position']
+                            if now_minute in (15,30,45):
+                                current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+                                v_value = str(round((long_price_change - short_price_change)*100,4))+'%'
+                                content_4 = f'{coin_long_name}:{coin_short_name}交易对在时间:{current_time}正在监控中，差距为{v_value}' + '\n'
+                                write_txt(content_4) 
+                            continue
+                else:
+                    break
     else:
         now_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
         now_dt = datetime.fromisoformat(now_time)

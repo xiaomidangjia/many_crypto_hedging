@@ -2034,6 +2034,561 @@ success_values_model3 = len(table_model_3[table_model_3.value>0])/len(table_mode
 return_values_model3 = np.sum(table_model_3['value'])
 
 
+# ====================================================================== 模型4 ==================================================================
+import json
+import requests
+import pandas as pd
+import time
+import numpy as np
+import os
+import re
+#from tqdm import tqdm
+from datetime import datetime,timedelta
+
+# ======= 正式开始执行
+date_now = str(datetime.utcnow())[0:10]
+
+# 获取数据
+
+import importlib
+import sys
+import os
+import urllib
+import requests
+import base64
+import json
+
+import time
+import pandas as pd
+import numpy as np
+import random
+import hmac
+import ccxt
+import pandas as pd
+import pandas_ta as ta
+import itertools
+import warnings
+# 禁止所有警告
+warnings.filterwarnings('ignore')
+# 计算价格变化率（Rate of Change）
+def calculate_roc(df, column='close_price', window=14):
+    df['ROC'] = df[column].pct_change(periods=window)  # 返回百分比变化
+    return df
+
+def calculate_rsi(df):
+    df['RSI'] = ta.rsi(df['close_price'], length=14)
+    return df
+API_URL = 'https://api.bitget.com'
+API_SECRET_KEY = 'ca8d708b774782ce0fd09c78ba5c19e1e421d5fd2a78964359e6eb306cf15c67'
+API_KEY = 'bg_42d96db83714abb3757250cef9ba7752'
+PASSPHRASE = 'HBLww130130130'
+margein_coin = 'USDT'
+futures_type = 'USDT-FUTURES'
+contract_num = 5
+
+def get_timestamp():
+    return int(time.time() * 1000)
+def sign(message, secret_key):
+    mac = hmac.new(bytes(secret_key, encoding='utf8'), bytes(message, encoding='utf-8'), digestmod='sha256')
+    d = mac.digest()
+    return base64.b64encode(d)
+def pre_hash(timestamp, method, request_path, body):
+    return str(timestamp) + str.upper(method) + request_path + body
+def parse_params_to_str(params):
+    url = '?'
+    for key, value in params.items():
+        url = url + str(key) + '=' + str(value) + '&'
+    return url[0:-1]
+def get_header(api_key, sign, timestamp, passphrase):
+    header = dict()
+    header['Content-Type'] = 'application/json'
+    header['ACCESS-KEY'] = api_key
+    header['ACCESS-SIGN'] = sign
+    header['ACCESS-TIMESTAMP'] = str(timestamp)
+    header['ACCESS-PASSPHRASE'] = passphrase
+    # header[LOCALE] = 'zh-CN'
+    return header
+
+def truncate(number, decimals):
+    factor = 10.0 ** decimals
+    return int(number * factor) / factor
+
+def write_txt(content):
+    with open(f"/home/liweiwei/duichong/test/process_result.txt", "a") as file:
+        file.write(content)
+
+def get_price(symbol):
+    w2 = 0
+    g2 = 0 
+    while w2 == 0:
+        try:
+            timestamp = get_timestamp()
+            response = None
+            request_path = "/api/v2/mix/market/ticker"
+            url = API_URL + request_path
+            params = {"symbol":symbol,"productType":futures_type}
+            request_path = request_path + parse_params_to_str(params)
+            url = API_URL + request_path
+            body = ""
+            sign_cang = sign(pre_hash(timestamp, "GET", request_path, str(body)), API_SECRET_KEY)
+            header = get_header(API_KEY, sign_cang, timestamp, PASSPHRASE)
+            response = requests.get(url, headers=header)
+            ticker = json.loads(response.text)
+            price_d = float(ticker['data'][0]['lastPr'])
+            if price_d > 0:
+                w2 = 1
+            else:
+                w2 = 0
+            g2 += 1
+
+        except:
+            time.sleep(0.2)
+            g2 += 1
+            continue
+    return price_d
+
+def open_state(crypto_usdt,order_usdt,side,tradeSide):
+    logo_b = 0
+    while logo_b == 0:
+        try:
+            timestamp = get_timestamp()
+            response = None
+            clientoid = "bitget%s"%(str(int(datetime.now().timestamp())))
+            #print('clientoid'+clientoid)
+            request_path = "/api/v2/mix/order/place-order"
+            url = API_URL + request_path
+            params = {"symbol":crypto_usdt,"productType":futures_type,"marginCoin": margein_coin, "marginMode":"crossed","side":side,"tradeSide":tradeSide,"size":str(order_usdt),"orderType":"market","clientOid":clientoid}
+            #print(params)
+            body = json.dumps(params)
+            sign_tranfer = sign(pre_hash(timestamp, "POST", request_path, str(body)), API_SECRET_KEY)
+            header = get_header(API_KEY, sign_tranfer, timestamp, PASSPHRASE)
+            response = requests.post(url, data=body, headers=header)
+            buy_res_base = json.loads(response.text)
+            #print("响应内容 (文本)---1:", buy_res_base)
+            buy_id_base = int(buy_res_base['data']['orderId'])
+            if buy_id_base  > 10:
+                logo_b = 1
+            else:
+                logo_b = 0
+        except:
+            time.sleep(0.2)
+            continue
+    return buy_id_base
+
+def check_order(crypto_usdt,id_num):
+    logo_s = 0
+    while logo_s == 0:
+        try:
+            timestamp = get_timestamp()
+            response = None
+            request_path_mix = "/api/v2/mix/order/detail"
+            params_mix = {"symbol":crypto_usdt,"productType":futures_type,"orderId":str(id_num)}
+            request_path_mix = request_path_mix + parse_params_to_str(params_mix)
+            url = API_URL + request_path_mix
+            body = ""
+            sign_mix = sign(pre_hash(timestamp, "GET", request_path_mix,str(body)), API_SECRET_KEY)
+            header_mix = get_header(API_KEY, sign_mix, timestamp, PASSPHRASE)
+            response_mix = requests.get(url, headers=header_mix)
+
+            response_1 = json.loads(response_mix.text)
+
+            base_price = float(response_1['data']['priceAvg'])             
+            base_num = float(response_1['data']['baseVolume'])
+            if base_price >0 and base_num > 0:
+                logo_s = 1
+            else:
+                logo_s = 0
+        except:
+            time.sleep(0.2)
+            continue
+    return base_price,base_num
+
+def get_bitget_klines(symbol,endTime,granularity):
+    timestamp = get_timestamp()
+    response = None
+    request_path_mix = "/api/v2/mix/market/history-candles"
+    params_mix = {"symbol":symbol,"granularity":granularity,"productType":"USDT-FUTURES","endTime": endTime,"limit": 100}
+    request_path_mix = request_path_mix + parse_params_to_str(params_mix)
+    url = API_URL + request_path_mix
+    body = ""
+    sign_mix = sign(pre_hash(timestamp, "GET", request_path_mix,str(body)), API_SECRET_KEY)
+    header_mix = get_header(API_KEY, sign_mix, timestamp, PASSPHRASE)
+    response_mix = requests.get(url, headers=header_mix)
+    response_1 = json.loads(response_mix.text)
+    return response_1["data"]
+
+def fetch_last_month_klines(symbol, granularity_value,number):
+    """
+    获取最近一个月的所有15分钟K线数据
+    """
+    klines = pd.DataFrame()
+    # 计算一个月前的时间戳（毫秒）
+    one_month_ago = int((datetime.now() - timedelta(days=50)).timestamp() * 1000)
+    end_time = one_month_ago
+    signal = 0
+    while True:
+        data = get_bitget_klines(symbol,endTime=end_time,granularity=granularity_value)
+        res = pd.DataFrame()
+        for i in range(len(data)):
+            ins = data[i]
+            date_time = ins[0]
+            open_price = ins[1]
+            high_price = ins[2]
+            low_price = ins[3]
+            close_price = ins[4]
+            btc_volumn = ins[5]
+            usdt_volumn = ins[6]
+            # 秒级时间戳
+            timestamp_seconds = int(date_time)/1000
+            # 转换为正常时间
+            normal_time = datetime.fromtimestamp(timestamp_seconds)
+            # 格式化为字符串
+            formatted_time = normal_time.strftime("%Y-%m-%d %H:%M:%S")
+            df = pd.DataFrame({'date_time':date_time,'formatted_time':formatted_time,'open_price':open_price,'high_price':high_price,'low_price':low_price,'close_price':close_price,'btc_volumn':btc_volumn,'usdt_volumn':usdt_volumn},index=[0])
+            res = pd.concat([res,df])
+        #print(res)
+        klines = pd.concat([klines,res])
+        #print(klines)
+        res = res.sort_values(by='date_time')
+        res = res.reset_index(drop=True)
+        # 更新下一个请求的开始时间为最后一条数据的时间戳
+        last_time = int(res['date_time'][len(res)-1])
+        #print(res['formatted_time'][0])
+        #print(res['formatted_time'][len(res)-1])
+        end_time = last_time + number * 1000 * 100  # 加上5分钟
+        #print(end_time)
+
+        # 如果获取的数据覆盖到当前时间，则停止循环
+        
+        if end_time <= int(time.time() * 1000) and signal ==0:
+            continue
+        elif end_time > int(time.time() * 1000) and signal ==0:
+            signal = 1
+            continue
+        else:
+            break
+
+        # 避免频繁请求API，添加适当的延时
+        time.sleep(1)
+
+    return klines
+
+coin_list = ['btc','sol','xrp','doge','eth']
+#coin_list = ['eth']
+for c_ele in coin_list:
+    symbol = c_ele.upper() + 'USDT'
+    print(symbol)
+    data_15m_name = c_ele + '_15m_data.csv'
+    #data_1m = fetch_last_month_klines(symbol,granularity_value='1m',number=60)
+    data_15m = fetch_last_month_klines(symbol,granularity_value='15m',number=900)
+    #data_1m.to_csv(data_1m_name)
+    data_15m.to_csv(data_15m_name)
+import importlib
+import sys
+import os
+import urllib
+import requests
+import base64
+import json
+
+import time
+import pandas as pd
+import numpy as np
+import random
+import hmac
+import pandas as pd
+import pandas_ta as ta
+import itertools
+import warnings
+# 禁止所有警告
+warnings.filterwarnings('ignore')
+
+btc_data = pd.read_csv('btc_15m_data.csv')
+sol_data = pd.read_csv('sol_15m_data.csv')
+eth_data = pd.read_csv('eth_15m_data.csv')
+xrp_data = pd.read_csv('xrp_15m_data.csv')
+doge_data = pd.read_csv('doge_15m_data.csv')
+
+btc_data['date_time'] = btc_data['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
+eth_data['date_time'] = eth_data['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
+sol_data['date_time'] = sol_data['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
+xrp_data['date_time'] = xrp_data['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
+doge_data['date_time'] = doge_data['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
+
+btc_data = btc_data.drop('formatted_time', axis=1)
+eth_data = eth_data.drop('formatted_time', axis=1)
+sol_data = sol_data.drop('formatted_time', axis=1)
+xrp_data = xrp_data.drop('formatted_time', axis=1)
+doge_data = doge_data.drop('formatted_time', axis=1)
+
+btc_data['date'] = btc_data['date_time'].apply(lambda x:x.date())
+btc_data['hour'] = btc_data['date_time'].apply(lambda x:x.hour)
+btc_data['minutes'] = btc_data['date_time'].apply(lambda x:x.minute)
+
+eth_data['date'] = eth_data['date_time'].apply(lambda x:x.date())
+eth_data['hour'] = eth_data['date_time'].apply(lambda x:x.hour)
+eth_data['minutes'] = eth_data['date_time'].apply(lambda x:x.minute)
+
+sol_data['date'] = sol_data['date_time'].apply(lambda x:x.date())
+sol_data['hour'] = sol_data['date_time'].apply(lambda x:x.hour)
+sol_data['minutes'] = sol_data['date_time'].apply(lambda x:x.minute)
+
+xrp_data['date'] = xrp_data['date_time'].apply(lambda x:x.date())
+xrp_data['hour'] = xrp_data['date_time'].apply(lambda x:x.hour)
+xrp_data['minutes'] = xrp_data['date_time'].apply(lambda x:x.minute)
+
+doge_data['date'] = doge_data['date_time'].apply(lambda x:x.date())
+doge_data['hour'] = doge_data['date_time'].apply(lambda x:x.hour)
+doge_data['minutes'] = doge_data['date_time'].apply(lambda x:x.minute)
+
+date_list = list(sorted(set(btc_data['date'])))
+date_p = str(date_list[1])
+data_l = str(date_list[-2])
+
+print(date_p,data_l)
+btc_data_15m = btc_data[(btc_data.date>=pd.to_datetime(date_p))&(btc_data.date<=pd.to_datetime(data_l))]
+sol_data_15m = sol_data[(sol_data.date>=pd.to_datetime(date_p))&(sol_data.date<=pd.to_datetime(data_l))]
+eth_data_15m = eth_data[(eth_data.date>=pd.to_datetime(date_p))&(eth_data.date<=pd.to_datetime(data_l))]
+xrp_data_15m = xrp_data[(xrp_data.date>=pd.to_datetime(date_p))&(xrp_data.date<=pd.to_datetime(data_l))]
+doge_data_15m = doge_data[(doge_data.date>=pd.to_datetime(date_p))&(doge_data.date<=pd.to_datetime(data_l))]
+btc_data_15m = btc_data_15m.sort_values(by='date_time')
+sol_data_15m = sol_data_15m.sort_values(by='date_time')
+eth_data_15m = eth_data_15m.sort_values(by='date_time')
+xrp_data_15m = xrp_data_15m.sort_values(by='date_time')
+doge_data_15m = doge_data_15m.sort_values(by='date_time')
+print(np.max(btc_data_15m['date']),np.min(btc_data_15m['date']))
+print(np.max(sol_data_15m['date']),np.min(sol_data_15m['date']))
+print(np.max(eth_data_15m['date']),np.min(eth_data_15m['date']))
+print(np.max(xrp_data_15m['date']),np.min(xrp_data_15m['date']))
+print(np.max(doge_data_15m['date']),np.min(doge_data_15m['date']))
+
+def calculate_bov(df):
+    df = df.sort_values(by='date_time')
+    df = df.reset_index(drop=True)
+    # 假设 df 是 BTC 历史数据
+    df['returns'] = df['close_price'].pct_change()
+    df['volatility_30d'] = df['returns'].rolling(30).std()
+    df['volatility_90d'] = df['returns'].rolling(90).std()
+    # 归一化（0-100）
+    df['volatility_score'] = (df['volatility_30d'] / df['volatility_30d'].max() * 100)
+    
+    bov = df['volatility_score'][len(df)-1]
+    return bov
+date_period = list(sorted(set(btc_data_15m['date'])))
+length = len(date_period)
+last_df = pd.DataFrame()
+i = 0
+while i < length-1:
+    try:
+        date_interval = date_period[i:i+4]
+        date_0 = date_interval[0]
+        date_1 = date_interval[2]
+        date_2 = date_interval[3]
+        print(date_0,date_1,date_2)
+        # =======================。前一天的参数
+        btc_data_15m_sample = btc_data_15m[(btc_data_15m.date>=date_0)&(btc_data_15m.date<=date_1)]
+        btc_data_15m_sample = btc_data_15m_sample.sort_values(by='date_time')
+        sol_data_15m_sample = sol_data_15m[(sol_data_15m.date>=date_0)&(sol_data_15m.date<=date_1)]
+        sol_data_15m_sample = sol_data_15m_sample.sort_values(by='date_time')
+        eth_data_15m_sample = eth_data_15m[(eth_data_15m.date>=date_0)&(eth_data_15m.date<=date_1)]
+        eth_data_15m_sample = eth_data_15m_sample.sort_values(by='date_time')
+        xrp_data_15m_sample = xrp_data_15m[(xrp_data_15m.date>=date_0)&(xrp_data_15m.date<=date_1)]
+        xrp_data_15m_sample = xrp_data_15m_sample.sort_values(by='date_time')
+        doge_data_15m_sample = doge_data_15m[(doge_data_15m.date>=date_0)&(doge_data_15m.date<=date_1)]
+        doge_data_15m_sample = doge_data_15m_sample.sort_values(by='date_time')
+
+        # ======================== 后一天的结果
+        btc_data_15m_result = btc_data_15m[btc_data_15m.date==date_2]
+        btc_data_15m_result = btc_data_15m_result.sort_values(by='date_time')
+        btc_data_15m_result = btc_data_15m_result.reset_index(drop=True)
+        sol_data_15m_result = sol_data_15m[sol_data_15m.date==date_2]
+        sol_data_15m_result = sol_data_15m_result.sort_values(by='date_time')
+        sol_data_15m_result = sol_data_15m_result.reset_index(drop=True)
+        eth_data_15m_result = eth_data_15m[eth_data_15m.date==date_2]
+        eth_data_15m_result = eth_data_15m_result.sort_values(by='date_time')
+        eth_data_15m_result = eth_data_15m_result.reset_index(drop=True)
+        xrp_data_15m_result = xrp_data_15m[xrp_data_15m.date==date_2]
+        xrp_data_15m_result = xrp_data_15m_result.sort_values(by='date_time')
+        xrp_data_15m_result = xrp_data_15m_result.reset_index(drop=True)
+        doge_data_15m_result = doge_data_15m[doge_data_15m.date==date_2]
+        doge_data_15m_result = doge_data_15m_result.sort_values(by='date_time')
+        doge_data_15m_result = doge_data_15m_result.reset_index(drop=True)
+
+
+        symbol_list = ['btc','eth','xrp','doge','sol']
+
+
+        for pair in itertools.combinations(symbol_list, 2):
+        #for pair in symbol_list:
+            coin_1 = pair[0]
+            coin_2 =  pair[1]
+            if coin_1 == 'btc':
+                coin1_data = btc_data_15m_sample
+                coin1_bov = calculate_bov(btc_data_15m_sample)
+                coin1_first_value = btc_data_15m_result['open_price'].iloc[0]
+                coin1_price_change = (btc_data_15m_result['close_price'][len(btc_data_15m_result)-1]- coin1_first_value) / coin1_first_value
+            elif coin_1 == 'eth':
+                coin1_data = eth_data_15m_sample
+                coin1_bov = calculate_bov(eth_data_15m_sample)
+                coin1_first_value = eth_data_15m_result['open_price'].iloc[0]
+                coin1_price_change = (eth_data_15m_result['close_price'][len(eth_data_15m_result)-1]- coin1_first_value) / coin1_first_value
+            elif coin_1 == 'xrp':
+                coin1_data = xrp_data_15m_sample
+                coin1_bov = calculate_bov(xrp_data_15m_sample)
+                coin1_first_value = xrp_data_15m_result['open_price'].iloc[0]
+                coin1_price_change = (xrp_data_15m_result['close_price'][len(xrp_data_15m_result)-1]- coin1_first_value) / coin1_first_value
+            elif coin_1 == 'sol':
+                coin1_data = sol_data_15m_sample
+                coin1_bov = calculate_bov(sol_data_15m_sample)
+                coin1_first_value = sol_data_15m_result['open_price'].iloc[0]
+                coin1_price_change = (sol_data_15m_result['close_price'][len(sol_data_15m_result)-1]- coin1_first_value) / coin1_first_value
+            elif coin_1 == 'doge':
+                coin1_data = doge_data_15m_sample
+                coin1_bov = calculate_bov(doge_data_15m_sample)
+                coin1_first_value = doge_data_15m_result['open_price'].iloc[0]
+                coin1_price_change = (doge_data_15m_result['close_price'][len(doge_data_15m_result)-1]- coin1_first_value) / coin1_first_value
+            else:
+                p = 1
+            if coin_2 == 'btc':
+                coin2_data = btc_data_15m_sample
+                coin2_bov = calculate_bov(btc_data_15m_sample)
+                coin2_first_value = btc_data_15m_result['open_price'].iloc[0]
+                coin2_price_change = (btc_data_15m_result['close_price'][len(btc_data_15m_result)-1]- coin2_first_value) / coin2_first_value   
+            elif coin_2 == 'eth':
+                coin2_data = eth_data_15m_sample
+                coin2_bov = calculate_bov(eth_data_15m_sample)
+                coin2_first_value = eth_data_15m_result['open_price'].iloc[0]
+                coin2_price_change = (eth_data_15m_result['close_price'][len(eth_data_15m_result)-1]- coin2_first_value) / coin2_first_value
+            elif coin_2 == 'xrp':
+                coin2_data = xrp_data_15m_sample
+                coin2_bov = calculate_bov(xrp_data_15m_sample)
+                coin2_first_value = xrp_data_15m_result['open_price'].iloc[0]
+                coin2_price_change = (xrp_data_15m_result['close_price'][len(xrp_data_15m_result)-1]- coin2_first_value) / coin2_first_value
+            elif coin_2 == 'sol':
+                coin2_data = sol_data_15m_sample
+                coin2_bov = calculate_bov(sol_data_15m_sample)
+                coin2_first_value = sol_data_15m_result['open_price'].iloc[0]
+                coin2_price_change = (sol_data_15m_result['close_price'][len(sol_data_15m_result)-1]- coin2_first_value) / coin2_first_value
+            elif coin_2 == 'doge':
+                coin2_data = doge_data_15m_sample
+                coin2_bov = calculate_bov(doge_data_15m_sample)
+                coin2_first_value = doge_data_15m_result['open_price'].iloc[0]
+                coin2_price_change = (doge_data_15m_result['close_price'][len(doge_data_15m_result)-1]- coin2_first_value) / coin2_first_value
+            else:
+                p = 1
+
+
+            new_data = coin1_data.merge(coin2_data,how='inner',on=['date_time'])
+            new_data = new_data.sort_values(by='date_time')
+            new_data = new_data.reset_index(drop=True)
+
+            # 进行协整分析
+
+            import statsmodels.api as sm
+            from statsmodels.tsa.stattools import adfuller
+            price1 = new_data['close_price_x']
+            price2 = new_data['close_price_y']
+            #print(price1,price2)
+
+            # 对数收益率
+            log_ret1 = np.log(price1 / price1.shift(1)).dropna()
+            log_ret2 = np.log(price2 / price2.shift(1)).dropna()
+
+            # Engle-Granger 2步法
+            # 1. 进行回归分析
+            X = sm.add_constant(log_ret2)  # 自变量（加常数项）
+            model = sm.OLS(log_ret1, X).fit()
+            residuals = model.resid
+            #print(residuals)
+
+            # 2. 检验回归残差是否平稳（ADF检验）
+            adf_result = adfuller(residuals)
+
+
+            # 提取收盘价
+            corr_value = new_data['close_price_x'].corr(new_data['close_price_y'])
+
+            # 计算价格比例
+            new_data['price_percent'] = new_data['close_price_x'] / new_data['close_price_y']
+
+            per_mean = np.mean(new_data['price_percent'])
+            per_std = np.std(new_data['price_percent'])
+
+            deviation_degree = (new_data['price_percent'][len(new_data)-1]-per_mean)/per_std
+
+
+            ins = pd.DataFrame({'date':date_1,'coin_1_name':coin_1,'coin_2_name':coin_2,'deviation_degree':deviation_degree,'corr_value':corr_value,'bov_d':coin1_bov - coin2_bov,'price_change':coin1_price_change-coin2_price_change},index=[0])
+            #print(ins)
+            last_df = pd.concat([last_df,ins])
+        i += 1
+    except:
+        break
+date_period = list(sorted(set(last_df['date'])))
+res_dict = {'coin_long':'sol','coin_short':'ltc','res':-1}
+look_df = pd.DataFrame()
+for date in date_period:
+    value = 0
+    ins = last_df[last_df.date==date]
+    ins = ins[(ins.corr_value>0.7)]
+    ins = ins.reset_index(drop=True)
+    if len(ins)>0:
+        ins['d_abs'] = ins['deviation_degree'].apply(lambda x:np.abs(x))
+        sub_ins = ins[ins.d_abs==np.max(ins['d_abs'])]
+        sub_ins = sub_ins.reset_index(drop=True)
+        if sub_ins['deviation_degree'][0] > 1.5:
+            coin_long = sub_ins['coin_1_name'][0]
+            coin_short = sub_ins['coin_2_name'][0]
+            value = sub_ins['price_change'][0]
+        elif sub_ins['deviation_degree'][0] < -1.5:
+            coin_long = sub_ins['coin_2_name'][0]
+            coin_short = sub_ins['coin_1_name'][0]
+            value = -sub_ins['price_change'][0] 
+        else:
+            coin_long = None
+            coin_short = None
+            value = 0
+
+        pre_coin_long = res_dict['coin_long']
+        pre_coin_short = res_dict['coin_short']
+        pre_coin_value = res_dict['res']
+        if coin_long == pre_coin_long and coin_short == pre_coin_short :
+            ins_1 = ins[(ins.coin_1_name!=coin_long)&(ins.coin_2_name!=coin_short)]
+            ins_1 = ins_1[(ins_1.coin_1_name!=coin_short)&(ins_1.coin_2_name!=coin_long)]
+            #print(ins)
+            if len(ins_1)>0:
+                sub_ins = ins_1[ins_1.d_abs==np.max(ins_1['d_abs'])]
+                sub_ins = sub_ins.reset_index(drop=True)
+                if sub_ins['deviation_degree'][0] > 1.5:
+                    coin_long = sub_ins['coin_1_name'][0]
+                    coin_short = sub_ins['coin_2_name'][0]
+                    value = sub_ins['price_change'][0]
+                elif sub_ins['deviation_degree'][0] < -1.5:
+                    coin_long = sub_ins['coin_2_name'][0]
+                    coin_short = sub_ins['coin_1_name'][0]
+                    value = -sub_ins['price_change'][0]
+
+                else:
+                    coin_long = None
+                    coin_short = None
+                    value = 0
+                
+        if value <0:
+            res_dict['coin_long'] = coin_long
+            res_dict['coin_short'] = coin_short
+            res_dict['res'] = value
+        date = ins['date'][0]
+
+        df = pd.DataFrame({'date':date,'coin_long':coin_long,'coin_short':coin_short,'value':value},index=[0])
+        #df = pd.DataFrame({'date':date,'value':np.mean(sub_ins['value'])},index=[0])
+
+        look_df = pd.concat([look_df,df])
+look_df = look_df.dropna()
+look_df = look_df.reset_index(drop=True)
+table_model_4 = look_df.iloc[-30:-1]
+action_values_model4 = len(table_model_4)
+success_values_model4 = len(table_model_4[table_model_4.value>0])/len(table_model_4)
+return_values_model4 = np.sum(table_model_4['value'])
+
 #======自动发邮件
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -2043,11 +2598,15 @@ import pandas as pd
 html_table1 = table_model_2.to_html(index=False)
 html_table2 = table_model_1.to_html(index=False)
 html_table3 = table_model_3.to_html(index=False)
+html_table4 = table_model_4.to_html(index=False)
 # 定义HTML内容，包含两个表格
 html_content = f"""
 <html>
   <body>
     <p>您好，</p>
+    <p>以下是第4模型表格，执行次数：{action_values_model4},成功率为：{success_values_model4},总收益为：{return_values_model4}：</p>
+    {html_table4}
+    <br>
     <p>以下是第3模型表格，执行次数：{action_values_model3},成功率为：{success_values_model3},总收益为：{return_values_model3}：</p>
     {html_table3}
     <br>

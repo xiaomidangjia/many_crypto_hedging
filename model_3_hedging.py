@@ -65,7 +65,9 @@ def calculate_price_change(df):
     return price_change
 
 API_URL = 'https://api.bitget.com'
-
+API_SECRET_KEY = '20dd0f34495bdd8889ebbadbff40a04068052d41fbf06f14e17d00f3b6d83e36'
+API_KEY = 'bg_4782cc476d58511adb005c8e2a7d6b84'
+PASSPHRASE = 'HBLww130130130'
 margein_coin = 'USDT'
 futures_type = 'USDT-FUTURES'
 contract_num = 20
@@ -454,7 +456,7 @@ while True:
         pre_coin_value = res_dict['res']
 
         if coin_long == pre_coin_long and coin_short == pre_coin_short and pre_coin_value < 0:
-            ins_1 = ins[(ins.coin_1_name!=coin_long)&(ins.coin_2_name!=coin_short)]
+            ins_1 = look_df[(look_df.coin_1_name!=coin_long)&(look_df.coin_2_name!=coin_short)]
             ins_1 = ins_1[(ins_1.coin_1_name!=coin_short)&(ins_1.coin_2_name!=coin_long)]
             #print(ins)
             sub_ins = ins_1[ins_1.rate_abs==np.max(ins_1['rate_abs'])]
