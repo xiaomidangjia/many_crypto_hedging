@@ -541,7 +541,7 @@ while True:
                         now_date_part = now_dt.date()
                         now_hour = now_dt.hour
                         now_minute = now_dt.minute
-                        
+                        now_second = now_dt.second
                         # 时间到了 utc0的 00 时间
                         if now_date_part == date_part and int(now_hour)==8:
                         #if int(now_hour)==8:
@@ -561,7 +561,7 @@ while True:
                                 res_dict['res'] = long_price_change - short_price_change
                         else:
                             position = positions['position']
-                            if now_minute in (15,30,45):
+                            if now_minute in (15,30,45) and now_second in (0,1,2):
                                 current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
                                 v_value = str(round((long_price_change - short_price_change)*100,4))+'%'
                                 content_4 = f'{coin_long_name}:{coin_short_name}交易对在时间:{current_time}正在监控中，差距为{v_value}' + '\n'
