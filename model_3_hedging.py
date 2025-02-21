@@ -65,7 +65,9 @@ def calculate_price_change(df):
     return price_change
 
 API_URL = 'https://api.bitget.com'
-
+API_SECRET_KEY = '20dd0f34495bdd8889ebbadbff40a04068052d41fbf06f14e17d00f3b6d83e36'
+API_KEY = 'bg_4782cc476d58511adb005c8e2a7d6b84'
+PASSPHRASE = 'HBLww130130130'
 margein_coin = 'USDT'
 futures_type = 'USDT-FUTURES'
 contract_num = 20
@@ -257,7 +259,6 @@ def fetch_last_month_klines(symbol, granularity_value,number):
 
     return klines
 
-res_dict = {'coin_long':'sol','coin_short':'ltc','res':-1}
 while True:
     time.sleep(1)
     raw_process_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
@@ -340,9 +341,9 @@ while True:
         last_df['date_time'] = last_df['time'].apply(lambda x: datetime.utcfromtimestamp(x/1000).strftime('%Y-%m-%d %H:%M:%S'))
         last_df['date'] = last_df['date_time'].apply(lambda x:pd.to_datetime(x).date())
         date_period = list(sorted(set(last_df['date'])))
-        date_period = date_period[-4:-1]
+        date_period = date_period[-5:-1]
         date_0 = date_period[0]
-        date_1 = date_period[2]
+        date_1 = date_period[3]
         last_df = last_df[(last_df.date>=date_0)&(last_df.date<=date_1)]
         import itertools
         sub_btc_fund = last_df[last_df.symbol=='BTCUSDT']
@@ -448,24 +449,6 @@ while True:
             coin_long = sub_ins['coin_2_name'][0]
             coin_short = sub_ins['coin_1_name'][0]
 
-
-        pre_coin_long = res_dict['coin_long']
-        pre_coin_short = res_dict['coin_short']
-        pre_coin_value = res_dict['res']
-
-        if coin_long == pre_coin_long and coin_short == pre_coin_short and pre_coin_value < 0:
-            ins_1 = look_df[(look_df.coin_1_name!=coin_long)&(look_df.coin_2_name!=coin_short)]
-            ins_1 = ins_1[(ins_1.coin_1_name!=coin_short)&(ins_1.coin_2_name!=coin_long)]
-            #print(ins)
-            sub_ins = ins_1[ins_1.rate_abs==np.max(ins_1['rate_abs'])]
-            sub_ins = sub_ins.reset_index(drop=True)
-            if sub_ins['coin_rate'][0]<0:
-                coin_long = sub_ins['coin_1_name'][0]
-                coin_short = sub_ins['coin_2_name'][0]
-            else:
-                coin_long = sub_ins['coin_2_name'][0]
-                coin_short = sub_ins['coin_1_name'][0] 
-
         data_target = date_period[-1]
         content_judge = f'根据{data_target}的数据判断{dt.date()}做多币种{coin_long},做空币种{coin_short}' + '\n'
         write_txt(content_judge)
@@ -542,7 +525,7 @@ while True:
 
         positions = {'position': 'None','coin_long_name':coin_long_usdt,'coin_short_name':coin_short_usdt,'coin_long_num':0,'coin_long_price':0,'coin_long_fee':0,'coin_short_num':0,'coin_short_price':0,'coin_short_fee':0,'close_signal':0,'coin_long_volumePlace':coin_long_volumePlace,'coin_short_volumePlace':coin_short_volumePlace}
 
-        order_value = 2000
+        order_value = 1500
         position = positions['position']
         while position in ('run_ing','None'):
             coin_long_name = positions['coin_long_name']
@@ -596,10 +579,6 @@ while True:
                     write_txt(content_2)
                     
                     position = positions['position']
-                    if long_price_change - short_price_change < 0:
-                        res_dict['coin_long'] = coin_long
-                        res_dict['coin_short'] = coin_short
-                        res_dict['res'] = long_price_change - short_price_change
                 else:
                     now_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
                     now_dt = datetime.fromisoformat(now_time)
@@ -621,10 +600,6 @@ while True:
                         content_3 = f'{coin_long_name}:{coin_short_name}交易对平仓,时间:{current_time}' + '\n'
                         write_txt(content_3)
                         position = positions['position']
-                        if long_price_change - short_price_change < 0:
-                            res_dict['coin_long'] = coin_long
-                            res_dict['coin_short'] = coin_short
-                            res_dict['res'] = long_price_change - short_price_change
                     else:
                         position = positions['position']
                         if now_minute in (15,30,45):

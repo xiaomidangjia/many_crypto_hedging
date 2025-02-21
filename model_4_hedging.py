@@ -65,7 +65,9 @@ def calculate_price_change(df):
     return price_change
 
 API_URL = 'https://api.bitget.com'
-
+API_SECRET_KEY = '48ba2d9468a9aecf42660aea67a3af70bc42ac8317343098e330e3824fa9d771'
+API_KEY = 'bg_f824be07e12f5c2ff648f6a0eb57833e'
+PASSPHRASE = 'HBLww130130130'
 margein_coin = 'USDT'
 futures_type = 'USDT-FUTURES'
 contract_num = 20
@@ -98,7 +100,7 @@ def truncate(number, decimals):
     return int(number * factor) / factor
 
 def write_txt(content):
-    with open(f"/root/many_crypto_hedging/process_4_result.txt", "a") as file:
+    with open(f"/root/mang_crypto_hedging_1/process_4_result.txt", "a") as file:
         file.write(content)
 
 def get_price(symbol):
@@ -257,7 +259,7 @@ def fetch_last_month_klines(symbol, granularity_value,number):
 
     return klines
 
-res_dict = {'coin_long':'sol','coin_short':'ltc','res':-1}
+res_dict = {'coin_long':'eth','coin_short':'btc','res':-1}
 while True:
     time.sleep(1)
     raw_process_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
@@ -272,43 +274,48 @@ while True:
         content_process_close = f'程序最终结束的日期{date_part}和小时{8}'+ '\n'
         write_txt(content_process_start)
         write_txt(content_process_close)
+        logo = 0
+        while logo == 0:
+            coin_list = ['btc','sol','xrp','doge','eth']
+            for c_ele in coin_list:
+                symbol = c_ele.upper() + 'USDT'
+                data_15m_name = c_ele + '_15m_data_m4.csv'
+                data_15m = fetch_last_month_klines(symbol,granularity_value='15m',number=900)
+                data_15m.to_csv(data_15m_name)
 
-        coin_list = ['btc','sol','xrp','doge','eth']
-        for c_ele in coin_list:
-            symbol = c_ele.upper() + 'USDT'
-            data_15m_name = c_ele + '_15m_data_m4.csv'
-            data_15m = fetch_last_month_klines(symbol,granularity_value='15m',number=900)
-            data_15m.to_csv(data_15m_name)
-
-        # 读取15分钟数据
-        btc_data_15m = pd.read_csv('btc_15m_data_m4.csv')
-        sol_data_15m = pd.read_csv('sol_15m_data_m4.csv')
-        eth_data_15m = pd.read_csv('eth_15m_data_m4.csv')
-        xrp_data_15m = pd.read_csv('xrp_15m_data_m4.csv')
-        doge_data_15m = pd.read_csv('doge_15m_data_m4.csv')
-        # 把uct8的数据变为uct0的数据
-        btc_data_15m['date_time'] = btc_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
-        sol_data_15m['date_time'] = sol_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
-        eth_data_15m['date_time'] = eth_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
-        xrp_data_15m['date_time'] = xrp_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
-        doge_data_15m['date_time'] = doge_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
-        btc_data_15m['date'] = btc_data_15m['date_time'].apply(lambda x:x.date())
-        sol_data_15m['date'] = sol_data_15m['date_time'].apply(lambda x:x.date())
-        eth_data_15m['date'] = eth_data_15m['date_time'].apply(lambda x:x.date())
-        xrp_data_15m['date'] = xrp_data_15m['date_time'].apply(lambda x:x.date())
-        doge_data_15m['date'] = doge_data_15m['date_time'].apply(lambda x:x.date())
-
-
-        btc_data_15m = btc_data_15m[['date_time','date','close_price','high_price','low_price','open_price']]
-        sol_data_15m = sol_data_15m[['date_time','date','close_price','high_price','low_price','open_price']]
-        eth_data_15m = eth_data_15m[['date_time','date','close_price','high_price','low_price','open_price']]
-        xrp_data_15m = xrp_data_15m[['date_time','date','close_price','high_price','low_price','open_price']]
-        doge_data_15m = doge_data_15m[['date_time','date','close_price','high_price','low_price','open_price']]
+            # 读取15分钟数据
+            btc_data_15m = pd.read_csv('btc_15m_data_m4.csv')
+            sol_data_15m = pd.read_csv('sol_15m_data_m4.csv')
+            eth_data_15m = pd.read_csv('eth_15m_data_m4.csv')
+            xrp_data_15m = pd.read_csv('xrp_15m_data_m4.csv')
+            doge_data_15m = pd.read_csv('doge_15m_data_m4.csv')
+            # 把uct8的数据变为uct0的数据
+            btc_data_15m['date_time'] = btc_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
+            sol_data_15m['date_time'] = sol_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
+            eth_data_15m['date_time'] = eth_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
+            xrp_data_15m['date_time'] = xrp_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
+            doge_data_15m['date_time'] = doge_data_15m['formatted_time'].apply(lambda x:datetime.strptime(x,'%Y-%m-%d %H:%M:%S') - timedelta(hours=8))
+            btc_data_15m['date'] = btc_data_15m['date_time'].apply(lambda x:x.date())
+            sol_data_15m['date'] = sol_data_15m['date_time'].apply(lambda x:x.date())
+            eth_data_15m['date'] = eth_data_15m['date_time'].apply(lambda x:x.date())
+            xrp_data_15m['date'] = xrp_data_15m['date_time'].apply(lambda x:x.date())
+            doge_data_15m['date'] = doge_data_15m['date_time'].apply(lambda x:x.date())
 
 
-        date_list = list(sorted(set(btc_data_15m['date'])))
-        data_start = str(date_list[-4])
-        data_end = str(date_list[-2])
+            btc_data_15m = btc_data_15m[['date_time','date','close_price','high_price','low_price','open_price']]
+            sol_data_15m = sol_data_15m[['date_time','date','close_price','high_price','low_price','open_price']]
+            eth_data_15m = eth_data_15m[['date_time','date','close_price','high_price','low_price','open_price']]
+            xrp_data_15m = xrp_data_15m[['date_time','date','close_price','high_price','low_price','open_price']]
+            doge_data_15m = doge_data_15m[['date_time','date','close_price','high_price','low_price','open_price']]
+
+
+            date_list = list(sorted(set(btc_data_15m['date'])))
+            data_start = str(date_list[-4])
+            data_end = str(date_list[-2])
+            if date_list[-2] == dt.date()-timedelta(days=1):
+                logo = 1
+            else:
+                logo = 0
 
         #print(data_target)
         btc_data_15m = btc_data_15m[(btc_data_15m.date>=pd.to_datetime(data_start))&(btc_data_15m.date<=pd.to_datetime(data_end))]
@@ -372,7 +379,7 @@ while True:
             deviation_degree = (new_data['price_percent'][len(new_data)-1]-per_mean)/per_std
             
                 
-            ins = pd.DataFrame({'date':date_1,'coin_1_name':coin_1,'coin_2_name':coin_2,'deviation_degree':deviation_degree,'corr_value':corr_value},index=[0])
+            ins = pd.DataFrame({'coin_1_name':coin_1,'coin_2_name':coin_2,'deviation_degree':deviation_degree,'corr_value':corr_value},index=[0])
             #print(ins)
             look_df = pd.concat([look_df,ins])
         look_df = look_df[(look_df.corr_value>0.7)]
@@ -392,31 +399,9 @@ while True:
             else:
                 coin_long = None
                 coin_short = None
-            pre_coin_long = res_dict['coin_long']
-            pre_coin_short = res_dict['coin_short']
-            pre_coin_value = res_dict['res']
-            if coin_long == pre_coin_long and coin_short == pre_coin_short :
-                ins_1 = look_df[(look_df.coin_1_name!=coin_long)&(look_df.coin_2_name!=coin_short)]
-                ins_1 = ins_1[(ins_1.coin_1_name!=coin_short)&(ins_1.coin_2_name!=coin_long)]
-                #print(ins)
-                if len(ins_1)>0:
-                    sub_ins = ins_1[ins_1.d_abs==np.max(ins_1['d_abs'])]
-                    sub_ins = sub_ins.reset_index(drop=True)
-                    if sub_ins['deviation_degree'][0] > 1.5:
-                        coin_long = sub_ins['coin_1_name'][0]
-                        coin_short = sub_ins['coin_2_name'][0]
-                    elif sub_ins['deviation_degree'][0] < -1.5:
-                        coin_long = sub_ins['coin_2_name'][0]
-                        coin_short = sub_ins['coin_1_name'][0]
-                    else:
-                        coin_long = None
-                        coin_short = None
-                else:
-                    coin_long = None
-                    coin_short = None
 
-        data_target = date_period[-1]
-        content_judge = f'根据{data_target}的数据判断{dt.date()}做多币种{coin_long},做空币种{coin_short}' + '\n'
+
+        content_judge = f'根据{data_end}的数据判断{dt.date()}做多币种{coin_long},做空币种{coin_short}' + '\n'
         write_txt(content_judge)
         
         judge = 0
@@ -491,7 +476,7 @@ while True:
 
             positions = {'position': 'None','coin_long_name':coin_long_usdt,'coin_short_name':coin_short_usdt,'coin_long_num':0,'coin_long_price':0,'coin_long_fee':0,'coin_short_num':0,'coin_short_price':0,'coin_short_fee':0,'close_signal':0,'coin_long_volumePlace':coin_long_volumePlace,'coin_short_volumePlace':coin_short_volumePlace}
 
-            order_value = 500
+            order_value = 1200
             position = positions['position']
             while position in ('run_ing','None'):
                 coin_long_name = positions['coin_long_name']
