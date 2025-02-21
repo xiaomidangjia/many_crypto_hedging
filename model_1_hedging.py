@@ -437,8 +437,8 @@ while True:
 
 
 
-        last_df_1 = sub_last_df[(sub_last_df.cci_d_abs==1) &(sub_last_df.roc_d_abs==1)]
-        last_df_2 = sub_last_df[(sub_last_df.cci_d_abs==-1)&(sub_last_df.roc_d_abs==-1)]
+        last_df_1 = last_df[(last_df.cci_d_abs==1) &(last_df.roc_d_abs==1)]
+        last_df_2 = last_df[(last_df.cci_d_abs==-1)&(last_df.roc_d_abs==-1)]
 
         if len(last_df_1) > 0 and len(last_df_2)>0:
             max_abs_value_1 = last_df_1['roc_d'].abs().max()
@@ -660,7 +660,8 @@ while True:
         now_date_part = now_dt.date()
         now_hour = now_dt.hour
         now_minute = now_dt.minute
-        if now_minute in (15,30,45):
+        now_second = now_dt.second
+        if now_minute in (15,30,45) and now_second in (0,1,2):
             current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
             content_5 = f'已经止盈或止损，程序时间监控中待重启,目前时间为：{now_time}' + '\n'
             write_txt(content_5)

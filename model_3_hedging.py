@@ -286,7 +286,7 @@ while True:
 
         # 获取 3 年前的时间戳（毫秒）
         def get_three_years_ago_timestamp():
-            three_years_in_seconds = 4 * 24 * 60 * 60  # 3年 = 3 * 365 * 24 * 60 * 60 秒
+            three_years_in_seconds = 5 * 24 * 60 * 60  # 3年 = 3 * 365 * 24 * 60 * 60 秒
             return to_milliseconds(time.time() - three_years_in_seconds)
 
         # 获取资金费率
@@ -328,22 +328,31 @@ while True:
                 time.sleep(1)
             
             return all_funding_rates
+        raw_process_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+        # 将字符串解析为 datetime 对象
+        dt = datetime.fromisoformat(raw_process_time)
+        logo = 0
+        while logo==0:
+            # 示例：获取近3年的BTCUSDT资金费率数据
+            symbol_list = ['BTCUSDT','ETHUSDT','DOGEUSDT','SOLUSDT','XRPUSDT','LTCUSDT','ADAUSDT']
+            last_df = pd.DataFrame()
+            for symbol in symbol_list:
+                funding_rates = get_funding_rates_for_three_years(symbol)
+                # 打印部分结果
+                for entry in funding_rates:  # 打印前10条数据
+                    ins = pd.DataFrame({'symbol':entry['symbol'], 'rate':float(entry['fundingRate']), 'time': entry['fundingTime']},index=[0])
+                    last_df = pd.concat([last_df,ins])
+            last_df['date_time'] = last_df['time'].apply(lambda x: datetime.utcfromtimestamp(x/1000).strftime('%Y-%m-%d %H:%M:%S'))
+            last_df['date'] = last_df['date_time'].apply(lambda x:pd.to_datetime(x).date())
+            date_period = list(sorted(set(last_df['date'])))
+            date_period = date_period[-5:-1]
+            date_0 = date_period[0]
+            date_1 = date_period[3]
+            if date_1 == dt.date()-timedelta(days=1):
+                logo = 1
+            else:
+                logo = 0
 
-        # 示例：获取近3年的BTCUSDT资金费率数据
-        symbol_list = ['BTCUSDT','ETHUSDT','DOGEUSDT','SOLUSDT','XRPUSDT','LTCUSDT','ADAUSDT']
-        last_df = pd.DataFrame()
-        for symbol in symbol_list:
-            funding_rates = get_funding_rates_for_three_years(symbol)
-            # 打印部分结果
-            for entry in funding_rates:  # 打印前10条数据
-                ins = pd.DataFrame({'symbol':entry['symbol'], 'rate':float(entry['fundingRate']), 'time': entry['fundingTime']},index=[0])
-                last_df = pd.concat([last_df,ins])
-        last_df['date_time'] = last_df['time'].apply(lambda x: datetime.utcfromtimestamp(x/1000).strftime('%Y-%m-%d %H:%M:%S'))
-        last_df['date'] = last_df['date_time'].apply(lambda x:pd.to_datetime(x).date())
-        date_period = list(sorted(set(last_df['date'])))
-        date_period = date_period[-5:-1]
-        date_0 = date_period[0]
-        date_1 = date_period[3]
         last_df = last_df[(last_df.date>=date_0)&(last_df.date<=date_1)]
         import itertools
         sub_btc_fund = last_df[last_df.symbol=='BTCUSDT']
@@ -617,7 +626,8 @@ while True:
         now_date_part = now_dt.date()
         now_hour = now_dt.hour
         now_minute = now_dt.minute
-        if now_minute in (15,30,45):
+        now_second = now_dt.second
+        if now_minute in (15,30,45) and now_second in (0,1,2):
             current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
             content_5 = f'已经止盈或止损，程序时间监控中待重启,目前时间为：{now_time}' + '\n'
             write_txt(content_5)

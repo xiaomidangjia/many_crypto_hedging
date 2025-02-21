@@ -100,7 +100,7 @@ def truncate(number, decimals):
     return int(number * factor) / factor
 
 def write_txt(content):
-    with open(f"/root/mang_crypto_hedging_1/process_4_result.txt", "a") as file:
+    with open(f"/root/many_crypto_hedging_1/process_4_result.txt", "a") as file:
         file.write(content)
 
 def get_price(symbol):
@@ -576,7 +576,8 @@ while True:
         now_date_part = now_dt.date()
         now_hour = now_dt.hour
         now_minute = now_dt.minute
-        if now_minute in (15,30,45):
+        now_second = now_dt.second
+        if now_minute in (15,30,45) and now_second in (0,1,2):
             current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
             content_5 = f'已经止盈或止损，程序时间监控中待重启,目前时间为：{now_time}' + '\n'
             write_txt(content_5)
